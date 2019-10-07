@@ -4,3 +4,6 @@ dynalite_devices.egg-info/PKG-INFO
 dynalite_devices.egg-info/requires.txt
 dynalite_devices.egg-info/SOURCES.txt
 dynalite_devices.egg-info/top_level.txt
+*.whl
+dist/dynalite_devices-0.1.1.tar.gz
+*.pyc

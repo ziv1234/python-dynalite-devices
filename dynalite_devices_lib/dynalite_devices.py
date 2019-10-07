@@ -12,57 +12,57 @@ import json
 import pprint # XXX maybe remove
 import copy
 
-from .const import (
-    DOMAIN, CONF_AREA_CREATE_MANUAL, CONF_AREA_CREATE_ASSIGN, CONF_AREA_CREATE_AUTO, CONF_TEMPLATEOVERRIDE, DEFAULT_COVERCHANNELCLASS, DEFAULT_COVERFACTOR, CONF_TRIGGER,
-    CONF_FACTOR, CONF_CHANNELTYPE, CONF_HIDDENENTITY, CONF_TILTPERCENTAGE, CONF_AREACREATE, CONF_AREAOVERRIDE, CONF_CHANNELCLASS, CONF_TEMPLATE, CONF_ROOM_ON, CONF_ROOM_OFF, 
-    DEFAULT_TEMPLATES, CONF_ROOM, DEFAULT_CHANNELTYPE, CONF_CHANNELCOVER
-)
-
 from dynalite_lib.dynalite import (
-    CONF_HOST, CONF_LOGLEVEL, CONF_LOGFORMATTER, CONF_PORT, CONF_DEFAULT, CONF_AREA, CONF_NAME, CONF_FADE, CONF_PRESET, CONF_AUTODISCOVER, CONF_POLLTIMER, 
-    CONF_CHANNEL, CONF_NODEFAULT, CONF_HOST, 
+    CONF_LOGLEVEL, CONF_LOGFORMATTER, CONF_PORT, CONF_DEFAULT, CONF_AREA, CONF_NAME, CONF_FADE, CONF_PRESET, CONF_AUTODISCOVER, CONF_POLLTIMER, 
+    CONF_CHANNEL, CONF_NODEFAULT,
     Dynalite
 )
 
-from dynalite_lib.dynalite import (
-    Dynalite, CONF_HOST, CONF_NAME, CONF_CHANNEL, CONF_AREA, CONF_PRESET, 
+from .const import (
+    DOMAIN, LOGGER, CONF_AREA_CREATE_MANUAL, CONF_AREA_CREATE_ASSIGN, CONF_AREA_CREATE_AUTO, CONF_TEMPLATEOVERRIDE, DEFAULT_COVERCHANNELCLASS, DEFAULT_COVERFACTOR, CONF_TRIGGER,
+    CONF_FACTOR, CONF_CHANNELTYPE, CONF_HIDDENENTITY, CONF_TILTPERCENTAGE, CONF_AREAOVERRIDE, CONF_CHANNELCLASS, CONF_TEMPLATE, CONF_ROOM_ON, CONF_ROOM_OFF, 
+    DEFAULT_TEMPLATES, CONF_ROOM, DEFAULT_CHANNELTYPE, CONF_CHANNELCOVER
 )
 
 from .light import DynaliteChannelLightDevice
-from .switch import DynaliteChannelSwitchDevice, DynalitePresetSwitchDevice, DynaliteRoomPresetSwitchDevice
+from .switch import DynaliteChannelSwitchDevice, DynalitePresetSwitchDevice, DynaliteDualPresetSwitchDevice
 from .cover import DynaliteChannelCoverDevice, DynaliteChannelCoverWithTiltDevice
 
 class BridgeError(Exception):
     def __init__(self, message):
         self.message = message
 
-class DynaliteBridge:
+class DynaliteDevices:
     """Manages a single Dynalite bridge."""
 
-    def __init__(self, host, config, loop, logger=LOGGER):
+    def __init__(self, config, loop, newDeviceFunc=None, updateDeviceFunc=None):
         """Initialize the system."""
-        self.host = host
         self.config = copy.deepcopy(config)
         self.loop = loop
-        self.logger = logger
-        self.area = {}
-        self.entities = []
+        self.newDeviceFunc = newDeviceFunc
+        self.updateDeviceFunc = updateDeviceFunc
+        self.devices = []
+        self.waiting_devices = []
+        self.configured = False
+        self.connected = False
+        self.added_presets = {}
+        self.added_channels = {}
+        self.added_room_switches = {}
 
     async def async_setup(self, tries=0):
-        """Set up a Dynalite bridge based on host parameter."""
-        host = self.host
+        """Set up a Dynalite bridge based on host parameter in the config."""
         loop = self.loop
-        self.logger.debug("bridge async_setup - %s" % pprint.pformat(self.config_entry.data))
+        LOGGER.debug("bridge async_setup - %s", pprint.pformat(self.config))
         loop.set_debug(True) # XXX
 
         # insert the templates
         if CONF_TEMPLATE not in self.config:
-            self.logger.debug(CONF_TEMPLATE + " not in config - using defaults")
+            LOGGER.debug(CONF_TEMPLATE + " not in config - using defaults")
             self.config[CONF_TEMPLATE] = DEFAULT_TEMPLATES
         else:
             for template in DEFAULT_TEMPLATES:
                 if template not in self.config[CONF_TEMPLATE]:
-                    self.logger.debug("%s not in " + CONF_TEMPLATE + " using default", template)
+                    LOGGER.debug("%s not in " + CONF_TEMPLATE + " using default", template)
                     self.config[CONF_TEMPLATE][template] = DEFAULT_TEMPLATES[template]
                 else:
                     for param in DEFAULT_TEMPLATES[template]:
@@ -106,10 +106,10 @@ class DynaliteBridge:
                         self.config[CONF_AREA][curArea][CONF_CHANNEL][str(curChannel)][CONF_FACTOR] = self.getTemplateIndex(curArea, CONF_CHANNELCOVER, CONF_FACTOR)
                     if self.getTemplateIndex(curArea, CONF_CHANNELCOVER, CONF_TILTPERCENTAGE):
                         self.config[CONF_AREA][curArea][CONF_CHANNEL][str(curChannel)][CONF_TILTPERCENTAGE] = self.getTemplateIndex(curArea, CONF_CHANNELCOVER, CONF_TILTPERCENTAGE)
-        self.logger.debug("bridge async_setup (after templates) - %s" % pprint.pformat(self.config))
+        LOGGER.debug("bridge async_setup (after templates) - %s" % pprint.pformat(self.config))
 
         # Configure the dynalite object         
-        self._dynalite = Dynalite(config=self.config, loop=hass.loop)
+        self._dynalite = Dynalite(config=self.config, loop=self.loop)
         eventHandler = self._dynalite.addListener(
             listenerFunction=self.handleEvent)
         eventHandler.monitorEvent('*')
@@ -127,25 +127,41 @@ class DynaliteBridge:
         channelChangeHandler.monitorEvent('CHANNEL')
         self._dynalite.start()
 
-        self.logger.debug("XXX finished dynalite async_start")
+        # register the rooms (switches on presets 1/4)
+        self.registerRooms()
+
+        LOGGER.debug("XXX finished dynalite async_start")
         return True
 
-    async def async_reset(self):
-        """Reset this bridge to default state.
+    def registerRooms(self):
+        room_template = self.config[CONF_TEMPLATE][CONF_ROOM] # always defined either by the user or by the defaults
+        try:
+            preset_on = room_template[CONF_ROOM_ON]
+            preset_off = room_template[CONF_ROOM_OFF]
+        except KeyError:
+            LOGGER.error(CONF_ROOM + " template must have " + CONF_ROOM_ON + " and " + CONF_ROOM_OFF + " need to handle in config_validation") 
+            return
+        for curArea in self.config[CONF_AREA]:
+            if CONF_TEMPLATE in self.config[CONF_AREA][curArea] and self.config[CONF_AREA][curArea][CONF_TEMPLATE] == CONF_ROOM:
+                newDevice = DynaliteDualPresetSwitchDevice(curArea, self.config[CONF_AREA][curArea][CONF_NAME], self.getMasterArea(curArea), self)
+                self.added_room_switches[int(curArea)] = newDevice
+                self.setPresetIfReady(curArea, CONF_ROOM, CONF_ROOM_ON, 1, newDevice)
+                self.setPresetIfReady(curArea, CONF_ROOM, CONF_ROOM_OFF, 2, newDevice)
+                self.registerNewDevice('switch', newDevice) 
 
-        Will cancel any scheduled setup retry and will unload
-        the config entry.
-        """
-        # XXX don't think it is working - not sure how to test it:
-        # so throwing an exception
-        raise BridgeError("Received async_reset - not implemented")
-        results = await asyncio.gather(
-            self.hass.config_entries.async_forward_entry_unload(
-                self.config_entry, "light"
-            ),
-        )
-        # None and True are OK
-        return False not in results
+    def registerNewDevice(self, category, device):
+        self.devices.append(device)
+        if self.configured: # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
+            LOGGER.debug("sent category %s device %s" % (category, device))
+            if self.newDeviceFunc:
+                self.newDeviceFunc([device])
+        else: # send all the devices together when configured
+            LOGGER.debug("queuing category %s device %s" % (category, device))
+            self.waiting_devices.append(device)
+            
+    def updateDevice(self, device):
+        if self.updateDeviceFunc:
+            self.updateDeviceFunc(device)
 
     def getTemplateIndex(self, area, template, conf):
         my_template = self.config[CONF_TEMPLATE][template] # always defined either by the user or by the defaults
@@ -158,49 +174,45 @@ class DynaliteBridge:
             pass
         return index
 
-    def setPresetIfReady(self, area, template, conf, deviceNum, entity):
+    def setPresetIfReady(self, area, template, conf, deviceNum, dualDevice):
         preset = self.getTemplateIndex(area, template, conf)
         if not preset:
             return
         try:
             device = self.added_presets[int(area)][int(preset)]
-            entity.set_device(deviceNum, device)
+            dualDevice.set_device(deviceNum, device)
         except KeyError:
             pass
 
-    async def registerRooms(self):
-        room_template = self.config[CONF_TEMPLATE][CONF_ROOM] # always defined either by the user or by the defaults
-        try:
-            preset_on = room_template[CONF_ROOM_ON]
-            preset_off = room_template[CONF_ROOM_OFF]
-        except KeyError:
-            self.logger.error(CONF_ROOM + " template must have " + CONF_ROOM_ON + " and " + CONF_ROOM_OFF + " need to handle in config_validation") # XXX handle in cv
-            return
-        for curArea in self.config[CONF_AREA]:
-            if CONF_TEMPLATE in self.config[CONF_AREA][curArea] and self.config[CONF_AREA][curArea][CONF_TEMPLATE] == CONF_ROOM:
-                newEntity = DynaliteRoomPresetSwitch(curArea, self.config[CONF_AREA][curArea][CONF_NAME], self.getHassArea(curArea), self)
-                self.added_room_switches[int(curArea)] = newEntity
-                self.setPresetIfReady(curArea, CONF_ROOM, CONF_ROOM_ON, 1, newEntity)
-                self.setPresetIfReady(curArea, CONF_ROOM, CONF_ROOM_OFF, 2, newEntity)
-                self.add_entity_when_registered('switch', newEntity) 
-
     def handleEvent(self, event=None, dynalite=None):
-        self.logger.debug("handleEvent - type=%s event=%s" % (event.eventType, pprint.pformat(event.data)))
+        LOGGER.debug("handleEvent - type=%s event=%s" % (event.eventType, pprint.pformat(event.data)))
+        if event.eventType == 'CONNECTED':
+            LOGGER.debug("received CONNECTED message")
+            self.connected = True
+        elif event.eventType == 'DISCONNECTED':
+            LOGGER.debug("received DISCONNECTED message")
+            self.connected = False
+        elif event.eventType == 'CONFIGURED':
+            LOGGER.debug("received CONFIGURED message")
+            self.configured = True
+            if self.newDeviceFunc and self.waiting_devices:
+                self.newDeviceFunc(self.waiting_devices)
+                self.waiting_devices = []
         return
 
-    def getHassArea(self, area):
+    def getMasterArea(self, area): # when you want to combine entities from different Dynet areas to the same area name
         if str(area) not in self.config[CONF_AREA]:
-            self.logger.error("getHassArea - we should not get here")
-            raise BridgeError("getHassArea - area " + str(area) + "is not in config")
+            LOGGER.error("getMasterArea - we should not get here")
+            raise BridgeError("getMasterArea - area " + str(area) + "is not in config")
         areaConfig=self.config[CONF_AREA][str(area)]
-        hassArea = areaConfig[CONF_NAME]
+        masterArea = areaConfig[CONF_NAME]
         if CONF_AREAOVERRIDE in areaConfig:
             overrideArea = areaConfig[CONF_AREAOVERRIDE]
-            hassArea = overrideArea if overrideArea.lower() != 'none' else ''
-        return hassArea
+            masterArea = overrideArea if overrideArea.lower() != 'none' else ''
+        return masterArea
         
     def handleNewPreset(self, event=None, dynalite=None):
-        self.logger.debug("handleNewPreset - event=%s" % pprint.pformat(event.data))
+        LOGGER.debug("handleNewPreset - event=%s" % pprint.pformat(event.data))
         if not hasattr(event, 'data'):
             return
         if not 'area' in event.data:
@@ -211,7 +223,7 @@ class DynaliteBridge:
         curPreset = event.data['preset']
 
         if str(curArea) not in self.config[CONF_AREA]:
-            self.logger.debug("adding area " + str(curArea) + " that is not in config")
+            LOGGER.debug("adding area " + str(curArea) + " that is not in config")
             self.config[CONF_AREA][str(curArea)] = {CONF_NAME: "Area " + str(curArea)}
         
         try:
@@ -225,11 +237,11 @@ class DynaliteBridge:
                     pass
             curName = self.config[CONF_AREA][str(curArea)][CONF_NAME] + " " + presetName # If not explicitly defined, use "areaname presetname"
         curDevice = self._dynalite.devices[CONF_AREA][curArea].preset[curPreset]
-        newEntity = DynalitePresetSwitch(curArea, curPreset, curName, self.getHassArea(curArea), self, curDevice)
-        self.add_entity_when_registered('switch', newEntity)
+        newDevice = DynalitePresetSwitchDevice(curArea, curPreset, curName, self.getMasterArea(curArea), self, curDevice)
+        self.registerNewDevice('switch', newDevice)
         if (curArea not in self.added_presets):
             self.added_presets[curArea] = {}
-        self.added_presets[curArea][curPreset] = newEntity
+        self.added_presets[curArea][curPreset] = newDevice
 
         try:
             hidden = self.config[CONF_AREA][str(curArea)][CONF_PRESET][str(curPreset)][CONF_HIDDENENTITY]
@@ -244,9 +256,9 @@ class DynaliteBridge:
                     roomSwitch=self.added_room_switches[int(curArea)]
                     roomTemplate = self.config[CONF_TEMPLATE][CONF_ROOM]
                     if int(curPreset) == int(self.getTemplateIndex(curArea, CONF_ROOM, CONF_ROOM_ON)):
-                        roomSwitch.set_device(1, newEntity)
+                        roomSwitch.set_device(1, newDevice)
                     if int(curPreset) == int(self.getTemplateIndex(curArea, CONF_ROOM, CONF_ROOM_OFF)):
-                        roomSwitch.set_device(2, newEntity)
+                        roomSwitch.set_device(2, newDevice)
             elif template == CONF_TRIGGER:
                 triggerPreset = self.getTemplateIndex(curArea, template, CONF_TRIGGER)
                 if int(curPreset) != int(triggerPreset):
@@ -254,16 +266,16 @@ class DynaliteBridge:
             elif template in [CONF_HIDDENENTITY, CONF_CHANNELCOVER]:
                 hidden = True
             else:
-                self.logger.error("Unknown template " + template + ". Should have been caught in config_validation")
+                LOGGER.error("Unknown template " + template + ". Should have been caught in config_validation")
         except KeyError:
             pass
         
         if hidden:
-            newEntity.set_hidden(True)   
-        self.logger.debug("Creating Dynalite preset area=%s preset=%s name=%s" % (curArea, curPreset, curName))
+            newDevice.set_hidden(True)   
+        LOGGER.debug("Creating Dynalite preset area=%s preset=%s name=%s" % (curArea, curPreset, curName))
 
     def handlePresetChange(self, event=None, dynalite=None):
-        self.logger.debug("handlePresetChange - event=%s" % pprint.pformat(event.data))
+        LOGGER.debug("handlePresetChange - event=%s" % pprint.pformat(event.data))
         if not hasattr(event, 'data'):
             return
         if not 'area' in event.data:
@@ -275,10 +287,10 @@ class DynaliteBridge:
 
         if int(curArea) in self.added_presets:
             for curPresetInArea in self.added_presets[int(curArea)]:
-                self.added_presets[int(curArea)][curPresetInArea].try_schedule_ha()
+                self.updateDevice(self.added_presets[int(curArea)][curPresetInArea])
 
     def handleNewChannel(self, event=None, dynalite=None):
-        self.logger.debug("handleNewChannel - event=%s" % pprint.pformat(event.data))
+        LOGGER.debug("handleNewChannel - event=%s" % pprint.pformat(event.data))
         if not hasattr(event, 'data'):
             return
         if not 'area' in event.data:
@@ -289,7 +301,7 @@ class DynaliteBridge:
         curChannel = event.data['channel']
 
         if str(curArea) not in self.config[CONF_AREA]:
-            self.logger.debug("adding area " + str(curArea) + " that is not in config")
+            LOGGER.debug("adding area " + str(curArea) + " that is not in config")
             self.config[CONF_AREA][str(curArea)] = {CONF_NAME: "Area " + str(curArea)}
         
         try:
@@ -301,38 +313,38 @@ class DynaliteBridge:
             channelConfig=self.config[CONF_AREA][str(curArea)][CONF_CHANNEL][str(curChannel)]
         except KeyError:
             channelConfig = None
-        self.logger.debug("handleNewChannel - channelConfig=%s" % pprint.pformat(channelConfig))
+        LOGGER.debug("handleNewChannel - channelConfig=%s" % pprint.pformat(channelConfig))
         channelType = channelConfig[CONF_CHANNELTYPE].lower() if channelConfig and CONF_CHANNELTYPE in channelConfig else DEFAULT_CHANNELTYPE
-        hassArea = self.getHassArea(curArea)
+        hassArea = self.getMasterArea(curArea)
         if channelType == 'light':
-            newEntity = DynaliteChannelLight(curArea, curChannel, curName, channelType, hassArea, self, curDevice)
-            self.add_entity_when_registered('light', newEntity)
+            newDevice = DynaliteChannelLightDevice(curArea, curChannel, curName, channelType, hassArea, self, curDevice)
+            self.registerNewDevice('light', newDevice)
         elif channelType == 'switch':
-            newEntity = DynaliteChannelSwitch(curArea, curChannel, curName, channelType, hassArea, self, curDevice)
-            self.add_entity_when_registered('switch', newEntity)
+            newDevice = DynaliteChannelSwitchDevice(curArea, curChannel, curName, channelType, hassArea, self, curDevice)
+            self.registerNewDevice('switch', newDevice)
         elif channelType == 'cover':
             factor = channelConfig[CONF_FACTOR] if CONF_FACTOR in channelConfig else DEFAULT_COVERFACTOR
             deviceClass = channelConfig[CONF_CHANNELCLASS] if CONF_CHANNELCLASS in channelConfig else DEFAULT_COVERCHANNELCLASS
             if CONF_TILTPERCENTAGE in channelConfig:
-                newEntity = DynaliteChannelCoverWithTilt(curArea, curChannel, curName, channelType, deviceClass, factor, channelConfig[CONF_TILTPERCENTAGE], hassArea, self, curDevice)
+                newDevice = DynaliteChannelCoverWithTiltDevice(curArea, curChannel, curName, channelType, deviceClass, factor, channelConfig[CONF_TILTPERCENTAGE], hassArea, self, curDevice)
             else:
-                newEntity = DynaliteChannelCover(curArea, curChannel, curName, channelType, deviceClass, factor, hassArea, self, curDevice)
-            self.add_entity_when_registered('cover', newEntity)
+                newDevice = DynaliteChannelCoverDevice(curArea, curChannel, curName, channelType, deviceClass, factor, hassArea, self, curDevice)
+            self.registerNewDevice('cover', newDevice)
         else:
-            self.logger.info("unknown chnanel type %s - ignoring", channelType)
+            LOGGER.info("unknown chnanel type %s - ignoring", channelType)
             return
         if (curArea not in self.added_channels):
             self.added_channels[curArea] = {}
-        self.added_channels[curArea][curChannel] = newEntity
+        self.added_channels[curArea][curChannel] = newDevice
         if channelConfig and channelConfig[CONF_HIDDENENTITY]:
-            newEntity.set_hidden(True)   
+            newDevice.set_hidden(True)   
         if self.config[CONF_AREA][str(curArea)].get(CONF_TEMPLATE) == CONF_HIDDENENTITY:
-            newEntity.set_hidden(True)
-        self.logger.debug("Creating Dynalite channel area=%s channel=%s name=%s" % (curArea, curChannel, curName))
+            newDevice.set_hidden(True)
+        LOGGER.debug("Creating Dynalite channel area=%s channel=%s name=%s" % (curArea, curChannel, curName))
 
     def handleChannelChange(self, event=None, dynalite=None):
-        self.logger.debug("handleChannelChange - event=%s" % pprint.pformat(event.data))
-        self.logger.debug("handleChannelChange called event = %s" % event.msg)
+        LOGGER.debug("handleChannelChange - event=%s" % pprint.pformat(event.data))
+        LOGGER.debug("handleChannelChange called event = %s" % event.msg)
         if not hasattr(event, 'data'):
             return
         if not 'area' in event.data:
@@ -352,39 +364,12 @@ class DynaliteBridge:
             target_level = (255 - event.data['target_level']) / 254
             actual_level = target_level # when there is only a "set channel level" command, assume that this is both the actual and the target
         else:
-            self.logger.error("unknown action for channel change %s", action)
+            LOGGER.error("unknown action for channel change %s", action)
             return
         try:
             channelToSet = self.added_channels[int(curArea)][int(curChannel)]
             channelToSet.update_level(actual_level, target_level)
-            channelToSet.try_schedule_ha() # to only call if it was already added to ha
+            self.updateDevice(channelToSet) # to only call if it was already added to ha
         except KeyError:
             pass
         
-    async def entity_added_to_ha(self, entity):
-        areacreate = self.config[CONF_AREACREATE].lower()
-        if areacreate == CONF_AREA_CREATE_MANUAL:
-            self.logger.debug("area assignment set to manual - ignoring")
-            return # only need to update the areas if it is 'assign' or 'create'
-        if areacreate not in [CONF_AREA_CREATE_ASSIGN, CONF_AREA_CREATE_AUTO]:
-            self.logger.debug(CONF_AREACREATE + " has unknown value of %s - assuming \"" + CONF_AREA_CREATE_MANUAL + "\" and ignoring", areacreate)
-            return
-        uniqueID = entity.unique_id
-        hassArea = entity.get_hass_area
-        if hassArea != "":
-            self.logger.debug("assigning hass area %s to entity %s" % (hassArea, uniqueID))
-            device = self.device_reg.async_get_device({(DOMAIN, uniqueID)}, ())
-            if not device:
-                self.logger.error("uniqueID %s has no device ID", uniqueID)
-                return
-            areaEntry = self.area_reg._async_is_registered(hassArea)
-            if not areaEntry:
-                if areacreate != CONF_AREA_CREATE_AUTO:
-                    self.logger.debug("Area %s not registered and " + CONF_AREACREATE + " is not \"" + CONF_AREA_CREATE_AUTO + "\" - ignoring", hassArea)
-                    return
-                else:
-                    self.logger.debug("Creating new area %s", hassArea)
-                    areaEntry = self.area_reg.async_create(hassArea)
-            self.logger.debug("assigning deviceid=%s area_id=%s" % (device.id, areaEntry.id))
-            self.device_reg.async_update_device(device.id, area_id=areaEntry.id)
-
