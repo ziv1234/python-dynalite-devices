@@ -12,16 +12,17 @@ import json
 import pprint # XXX maybe remove
 import copy
 
-from .const import (
+from dynalite_lib.dynalite import (
     CONF_LOGLEVEL, CONF_LOGFORMATTER, CONF_PORT, CONF_DEFAULT, CONF_AREA, CONF_NAME, CONF_FADE, CONF_PRESET, CONF_AUTODISCOVER, CONF_POLLTIMER, 
-    CONF_CHANNEL, CONF_NODEFAULT, DOMAIN, LOGGER, CONF_AREA_CREATE_MANUAL, CONF_AREA_CREATE_ASSIGN, CONF_AREA_CREATE_AUTO, CONF_TEMPLATEOVERRIDE, 
-    DEFAULT_COVERCHANNELCLASS, DEFAULT_COVERFACTOR, CONF_TRIGGER, CONF_FACTOR, CONF_CHANNELTYPE, CONF_HIDDENENTITY, CONF_TILTPERCENTAGE, 
-    CONF_AREAOVERRIDE, CONF_CHANNELCLASS, CONF_TEMPLATE, CONF_ROOM_ON, CONF_ROOM_OFF, DEFAULT_TEMPLATES, CONF_ROOM, DEFAULT_CHANNELTYPE, 
-    CONF_CHANNELCOVER, CONF_NONE, EVENT_NEWPRESET, EVENT_NEWCHANNEL, EVENT_PRESET, EVENT_CHANNEL, EVENT_CONNECTED, EVENT_DISCONNECTED, EVENT_CONFIGURED,
-    CONF_ACTION, CONF_ACTION_REPORT, CONF_ACTION_CMD, CONF_TRGT_LEVEL, CONF_ACT_LEVEL, CONF_ALL
+    CONF_CHANNEL, CONF_NODEFAULT,
+    Dynalite
 )
 
-from dynalite_lib.dynalite import Dynalite
+from .const import (
+    DOMAIN, LOGGER, CONF_AREA_CREATE_MANUAL, CONF_AREA_CREATE_ASSIGN, CONF_AREA_CREATE_AUTO, CONF_TEMPLATEOVERRIDE, DEFAULT_COVERCHANNELCLASS, DEFAULT_COVERFACTOR, CONF_TRIGGER,
+    CONF_FACTOR, CONF_CHANNELTYPE, CONF_HIDDENENTITY, CONF_TILTPERCENTAGE, CONF_AREAOVERRIDE, CONF_CHANNELCLASS, CONF_TEMPLATE, CONF_ROOM_ON, CONF_ROOM_OFF, 
+    DEFAULT_TEMPLATES, CONF_ROOM, DEFAULT_CHANNELTYPE, CONF_CHANNELCOVER
+)
 
 from .light import DynaliteChannelLightDevice
 from .switch import DynaliteChannelSwitchDevice, DynalitePresetSwitchDevice, DynaliteDualPresetSwitchDevice
@@ -114,21 +115,22 @@ class DynaliteDevices:
         eventHandler.monitorEvent('*')
         newPresetHandler = self._dynalite.addListener(
             listenerFunction=self.handleNewPreset)
-        newPresetHandler.monitorEvent(EVENT_NEWPRESET)
+        newPresetHandler.monitorEvent('NEWPRESET')
         presetChangeHandler = self._dynalite.addListener(
             listenerFunction=self.handlePresetChange)
-        presetChangeHandler.monitorEvent(EVENT_PRESET)
+        presetChangeHandler.monitorEvent('PRESET')
         newChannelHandler = self._dynalite.addListener(
             listenerFunction=self.handleNewChannel)
-        newChannelHandler.monitorEvent(EVENT_NEWCHANNEL)
+        newChannelHandler.monitorEvent('NEWCHANNEL')
         channelChangeHandler = self._dynalite.addListener(
             listenerFunction=self.handleChannelChange)
-        channelChangeHandler.monitorEvent(EVENT_CHANNEL)
+        channelChangeHandler.monitorEvent('CHANNEL')
         self._dynalite.start()
 
         # register the rooms (switches on presets 1/4)
         self.registerRooms()
 
+        LOGGER.debug("XXX finished dynalite async_start")
         return True
 
     def registerRooms(self):
@@ -157,10 +159,6 @@ class DynaliteDevices:
             LOGGER.debug("queuing category %s device %s" % (category, device))
             self.waiting_devices.append(device)
             
-    @property
-    def available(self):
-        return self.connected
-    
     def updateDevice(self, device):
         if self.updateDeviceFunc:
             self.updateDeviceFunc(device)
@@ -188,15 +186,13 @@ class DynaliteDevices:
 
     def handleEvent(self, event=None, dynalite=None):
         LOGGER.debug("handleEvent - type=%s event=%s" % (event.eventType, pprint.pformat(event.data)))
-        if event.eventType == EVENT_CONNECTED:
+        if event.eventType == 'CONNECTED':
             LOGGER.debug("received CONNECTED message")
             self.connected = True
-            self.updateDevice(CONF_ALL)
-        elif event.eventType == EVENT_DISCONNECTED:
+        elif event.eventType == 'DISCONNECTED':
             LOGGER.debug("received DISCONNECTED message")
             self.connected = False
-            self.updateDevice(CONF_ALL)
-        elif event.eventType == EVENT_CONFIGURED:
+        elif event.eventType == 'CONFIGURED':
             LOGGER.debug("received CONFIGURED message")
             self.configured = True
             if self.newDeviceFunc and self.waiting_devices:
@@ -212,19 +208,19 @@ class DynaliteDevices:
         masterArea = areaConfig[CONF_NAME]
         if CONF_AREAOVERRIDE in areaConfig:
             overrideArea = areaConfig[CONF_AREAOVERRIDE]
-            masterArea = overrideArea if overrideArea.lower() != CONF_NONE else ''
+            masterArea = overrideArea if overrideArea.lower() != 'none' else ''
         return masterArea
         
     def handleNewPreset(self, event=None, dynalite=None):
         LOGGER.debug("handleNewPreset - event=%s" % pprint.pformat(event.data))
         if not hasattr(event, 'data'):
             return
-        if not CONF_AREA in event.data:
+        if not 'area' in event.data:
             return
-        curArea = event.data[CONF_AREA]
-        if not CONF_PRESET in event.data:
+        curArea = event.data['area']
+        if not 'preset' in event.data:
             return
-        curPreset = event.data[CONF_PRESET]
+        curPreset = event.data['preset']
 
         if str(curArea) not in self.config[CONF_AREA]:
             LOGGER.debug("adding area " + str(curArea) + " that is not in config")
@@ -282,12 +278,12 @@ class DynaliteDevices:
         LOGGER.debug("handlePresetChange - event=%s" % pprint.pformat(event.data))
         if not hasattr(event, 'data'):
             return
-        if not CONF_AREA in event.data:
+        if not 'area' in event.data:
             return
-        curArea = event.data[CONF_AREA]
-        if not CONF_PRESET in event.data:
+        curArea = event.data['area']
+        if not 'preset' in event.data:
             return
-        curPreset = event.data[CONF_PRESET]
+        curPreset = event.data['preset']
 
         if int(curArea) in self.added_presets:
             for curPresetInArea in self.added_presets[int(curArea)]:
@@ -297,12 +293,12 @@ class DynaliteDevices:
         LOGGER.debug("handleNewChannel - event=%s" % pprint.pformat(event.data))
         if not hasattr(event, 'data'):
             return
-        if not CONF_AREA in event.data:
+        if not 'area' in event.data:
             return
-        curArea = event.data[CONF_AREA]
-        if not CONF_CHANNEL in event.data:
+        curArea = event.data['area']
+        if not 'channel' in event.data:
             return
-        curChannel = event.data[CONF_CHANNEL]
+        curChannel = event.data['channel']
 
         if str(curArea) not in self.config[CONF_AREA]:
             LOGGER.debug("adding area " + str(curArea) + " that is not in config")
@@ -351,21 +347,21 @@ class DynaliteDevices:
         LOGGER.debug("handleChannelChange called event = %s" % event.msg)
         if not hasattr(event, 'data'):
             return
-        if not CONF_AREA in event.data:
+        if not 'area' in event.data:
             return
-        curArea = event.data[CONF_AREA]
-        if not CONF_CHANNEL in event.data:
+        curArea = event.data['area']
+        if not 'channel' in event.data:
             return
-        curChannel = event.data[CONF_CHANNEL]
-        if not CONF_TRGT_LEVEL in event.data:
+        curChannel = event.data['channel']
+        if not 'target_level' in event.data:
             return
 
-        action = event.data[CONF_ACTION]
-        if action == CONF_ACTION_REPORT:
-            actual_level = (255 - event.data[CONF_ACT_LEVEL]) / 254
-            target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
-        elif action == CONF_ACTION_CMD:
-            target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
+        action = event.data['action']
+        if action == 'report':
+            actual_level = (255 - event.data['actual_level']) / 254
+            target_level = (255 - event.data['target_level']) / 254
+        elif action == 'cmd':
+            target_level = (255 - event.data['target_level']) / 254
             actual_level = target_level # when there is only a "set channel level" command, assume that this is both the actual and the target
         else:
             LOGGER.error("unknown action for channel change %s", action)

@@ -1,7 +1,7 @@
 """Support for Dynalite channels as lights."""
 import asyncio
 import logging
-from .const import DOMAIN, LOGGER, ATTR_BRIGHTNESS
+from .const import DOMAIN, LOGGER
 
 from .dynalitebase import DynaliteChannelBaseDevice
 

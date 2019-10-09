@@ -1,7 +1,7 @@
 """Support for the Dynalite channels as covers."""
 import asyncio
 import logging
-from .const import DOMAIN, LOGGER, CONF_COVERS, ATTR_POSITION, ATTR_TILT_POSITION
+from .const import DOMAIN, LOGGER, CONF_COVERS
 
 from .dynalitebase import DynaliteChannelBaseDevice
 
@@ -66,6 +66,7 @@ class DynaliteChannelCoverDevice(DynaliteChannelBaseDevice):
 
     async def async_set_cover_position(self, **kwargs):
         """Open the cover."""
+        # LOGGER.debug("XXX async_set_cover_position params=%s", pprint.pformat(kwargs))
         target_position = kwargs[ATTR_POSITION] / 100
         position_diff = target_position - self._current_position
         level_diff = position_diff * self._cover_factor
