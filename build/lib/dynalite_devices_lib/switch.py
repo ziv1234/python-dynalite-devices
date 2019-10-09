@@ -4,7 +4,12 @@ import logging
 from .const import DOMAIN, LOGGER
 import pprint
 
-from .dynalitebase import DynaliteChannelBaseDevice, DynaliteBaseDevice, DynaliteDualPresetDevice
+from .dynalitebase import (
+    DynaliteChannelBaseDevice,
+    DynaliteBaseDevice,
+    DynaliteDualPresetDevice,
+)
+
 
 class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Switch."""
@@ -16,8 +21,8 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
 
     @property
     def category(self):
-        return 'switch'
-        
+        return "switch"
+
     @property
     def is_on(self):
         """Return true if switch is on."""
@@ -32,6 +37,7 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
     async def async_turn_off(self, **kwargs):
         self._device.turnOff()
 
+
 class DynalitePresetSwitchDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
@@ -44,19 +50,19 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
 
     @property
     def category(self):
-        return 'switch'
-        
+        return "switch"
+
     @property
     def unique_id(self):
         """Return the ID of this cover."""
-        return "dynalite_area_"+str(self._area)+"_preset_"+str(self._preset)
+        return "dynalite_area_" + str(self._area) + "_preset_" + str(self._preset)
 
     @property
     def is_on(self):
         """Return true if device is on."""
         new_level = self._device.active
         if new_level != self._level:
-            self.update_listeners() # XXX should this move to update_level?
+            self.update_listeners()  # XXX should this move to update_level?
         self._level = new_level
         return self._level
 
@@ -69,6 +75,7 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
     async def async_turn_off(self, **kwargs):
         self._device.turnOff()
 
+
 class DynaliteDualPresetSwitchDevice(DynaliteDualPresetDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
@@ -78,12 +85,12 @@ class DynaliteDualPresetSwitchDevice(DynaliteDualPresetDevice):
 
     @property
     def category(self):
-        return 'switch'
-        
+        return "switch"
+
     @property
     def unique_id(self):
         """Return the ID of this room switch."""
-        return "dynalite_area_"+str(self._area)+"_room_switch"
+        return "dynalite_area_" + str(self._area) + "_room_switch"
 
     @property
     def is_on(self):
@@ -95,4 +102,3 @@ class DynaliteDualPresetSwitchDevice(DynaliteDualPresetDevice):
 
     async def async_turn_off(self, **kwargs):
         await self.get_device(2).async_turn_on()
-        

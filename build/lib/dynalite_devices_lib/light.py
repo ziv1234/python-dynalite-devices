@@ -5,6 +5,7 @@ from .const import DOMAIN, LOGGER, ATTR_BRIGHTNESS
 
 from .dynalitebase import DynaliteChannelBaseDevice
 
+
 class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Light."""
 
@@ -15,8 +16,8 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
 
     @property
     def category(self):
-        return 'light'
-        
+        return "light"
+
     @property
     def brightness(self):
         """Return the brightness of this light between 0..255."""
@@ -29,7 +30,7 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
 
     def update_level(self, actual_level, target_level):
         self._level = actual_level
-        
+
     async def async_turn_on(self, **kwargs):
         if ATTR_BRIGHTNESS in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS] / 255.0
@@ -39,4 +40,3 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
 
     async def async_turn_off(self, **kwargs):
         self._device.turnOff()
-
