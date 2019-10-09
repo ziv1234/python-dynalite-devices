@@ -23,7 +23,7 @@ class DynaliteBaseDevice: # Deriving from Object so it doesn't override the enti
     @property
     def available(self):
         """Return if cover is available."""
-        return True
+        return self._bridge.available
         
     @property
     def hidden(self):
@@ -80,7 +80,7 @@ class DynaliteDualPresetDevice(DynaliteBaseDevice):
     @property
     def available(self):
         """Return if dual device is available."""
-        return self.get_device(1) and self.get_device(2) # XXX probably need to check the base class as well
+        return self.get_device(1) and self.get_device(2) and super().available
 
     def set_device(self, devnum, device):
         self._devices[devnum] = device
