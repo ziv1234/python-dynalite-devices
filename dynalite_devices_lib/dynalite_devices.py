@@ -9,7 +9,6 @@
 import asyncio
 import logging
 import json
-import pprint # XXX maybe remove
 import copy
 
 from .const import (
@@ -21,7 +20,7 @@ from .const import (
     CONF_ACTION, CONF_ACTION_REPORT, CONF_ACTION_CMD, CONF_TRGT_LEVEL, CONF_ACT_LEVEL, CONF_ALL
 )
 
-from dynalite_lib.dynalite import Dynalite
+from dynalite_lib import Dynalite
 
 from .light import DynaliteChannelLightDevice
 from .switch import DynaliteChannelSwitchDevice, DynalitePresetSwitchDevice, DynaliteDualPresetSwitchDevice
@@ -51,7 +50,7 @@ class DynaliteDevices:
     async def async_setup(self, tries=0):
         """Set up a Dynalite bridge based on host parameter in the config."""
         loop = self.loop
-        LOGGER.debug("bridge async_setup - %s", pprint.pformat(self.config))
+        LOGGER.debug("bridge async_setup - %s", self.config)
         loop.set_debug(True) # XXX
 
         # insert the templates
@@ -105,7 +104,7 @@ class DynaliteDevices:
                         self.config[CONF_AREA][curArea][CONF_CHANNEL][str(curChannel)][CONF_FACTOR] = self.getTemplateIndex(curArea, CONF_CHANNELCOVER, CONF_FACTOR)
                     if self.getTemplateIndex(curArea, CONF_CHANNELCOVER, CONF_TILTPERCENTAGE):
                         self.config[CONF_AREA][curArea][CONF_CHANNEL][str(curChannel)][CONF_TILTPERCENTAGE] = self.getTemplateIndex(curArea, CONF_CHANNELCOVER, CONF_TILTPERCENTAGE)
-        LOGGER.debug("bridge async_setup (after templates) - %s" % pprint.pformat(self.config))
+        LOGGER.debug("bridge async_setup (after templates) - %s" % self.config)
 
         # Configure the dynalite object         
         self._dynalite = Dynalite(config=self.config, loop=self.loop)
@@ -187,7 +186,7 @@ class DynaliteDevices:
             pass
 
     def handleEvent(self, event=None, dynalite=None):
-        LOGGER.debug("handleEvent - type=%s event=%s" % (event.eventType, pprint.pformat(event.data)))
+        LOGGER.debug("handleEvent - type=%s event=%s" % (event.eventType, event.data))
         if event.eventType == EVENT_CONNECTED:
             LOGGER.debug("received CONNECTED message")
             self.connected = True
@@ -216,7 +215,7 @@ class DynaliteDevices:
         return masterArea
         
     def handleNewPreset(self, event=None, dynalite=None):
-        LOGGER.debug("handleNewPreset - event=%s" % pprint.pformat(event.data))
+        LOGGER.debug("handleNewPreset - event=%s" , event.data)
         if not hasattr(event, 'data'):
             return
         if not CONF_AREA in event.data:
@@ -279,7 +278,7 @@ class DynaliteDevices:
         LOGGER.debug("Creating Dynalite preset area=%s preset=%s name=%s" % (curArea, curPreset, curName))
 
     def handlePresetChange(self, event=None, dynalite=None):
-        LOGGER.debug("handlePresetChange - event=%s" % pprint.pformat(event.data))
+        LOGGER.debug("handlePresetChange - event=%s" % event.data)
         if not hasattr(event, 'data'):
             return
         if not CONF_AREA in event.data:
@@ -294,7 +293,7 @@ class DynaliteDevices:
                 self.updateDevice(self.added_presets[int(curArea)][curPresetInArea])
 
     def handleNewChannel(self, event=None, dynalite=None):
-        LOGGER.debug("handleNewChannel - event=%s" % pprint.pformat(event.data))
+        LOGGER.debug("handleNewChannel - event=%s" % event.data)
         if not hasattr(event, 'data'):
             return
         if not CONF_AREA in event.data:
@@ -317,7 +316,7 @@ class DynaliteDevices:
             channelConfig=self.config[CONF_AREA][str(curArea)][CONF_CHANNEL][str(curChannel)]
         except KeyError:
             channelConfig = None
-        LOGGER.debug("handleNewChannel - channelConfig=%s" % pprint.pformat(channelConfig))
+        LOGGER.debug("handleNewChannel - channelConfig=%s" % channelConfig)
         channelType = channelConfig[CONF_CHANNELTYPE].lower() if channelConfig and CONF_CHANNELTYPE in channelConfig else DEFAULT_CHANNELTYPE
         hassArea = self.getMasterArea(curArea)
         if channelType == 'light':
@@ -347,7 +346,7 @@ class DynaliteDevices:
         LOGGER.debug("Creating Dynalite channel area=%s channel=%s name=%s" % (curArea, curChannel, curName))
 
     def handleChannelChange(self, event=None, dynalite=None):
-        LOGGER.debug("handleChannelChange - event=%s" % pprint.pformat(event.data))
+        LOGGER.debug("handleChannelChange - event=%s" % event.data)
         LOGGER.debug("handleChannelChange called event = %s" % event.msg)
         if not hasattr(event, 'data'):
             return
