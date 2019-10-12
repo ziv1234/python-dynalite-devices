@@ -7,3 +7,8 @@ dynalite_devices.egg-info/top_level.txt
 *.whl
 dist/dynalite_devices-0.1.1.tar.gz
 *.pyc
+*.gz
+*.gz
+dist/dynalite_devices-0.1.6.tar.gz
+build/lib/dynalite_devices_lib/__version__.py
+build/lib/dynalite_devices_lib/dynalite_devices.py

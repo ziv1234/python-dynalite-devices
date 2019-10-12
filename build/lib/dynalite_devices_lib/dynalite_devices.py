@@ -255,11 +255,9 @@ class DynaliteDevices:
         if (
             self.configured
         ):  # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
-            LOGGER.debug("sent category %s device %s" % (category, device))
             if self.newDeviceFunc:
                 self.newDeviceFunc([device])
         else:  # send all the devices together when configured
-            LOGGER.debug("queuing category %s device %s" % (category, device))
             self.waiting_devices.append(device)
 
     @property
