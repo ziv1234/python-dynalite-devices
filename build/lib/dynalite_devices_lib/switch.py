@@ -14,10 +14,10 @@ from .dynalitebase import (
 class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Switch."""
 
-    def __init__(self, area, channel, name, type, master_area, bridge, device):
+    def __init__(self, area, area_name, channel, name, type, master_area, bridge, device):
         """Initialize the switch."""
         self._level = 0
-        super().__init__(area, channel, name, type, master_area, bridge, device)
+        super().__init__(area, area_name, channel, name, type, master_area, bridge, device)
 
     @property
     def category(self):
@@ -41,12 +41,12 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
 class DynalitePresetSwitchDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
-    def __init__(self, area, preset, name, master_area, bridge, device):
+    def __init__(self, area, area_name, preset, name, master_area, bridge, device):
         """Initialize the switch."""
         self._preset = preset
         self._level = 0
         self._device = device
-        super().__init__(area, name, master_area, bridge)
+        super().__init__(area, area_name, name, master_area, bridge)
 
     @property
     def category(self):
@@ -79,9 +79,9 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
 class DynaliteDualPresetSwitchDevice(DynaliteDualPresetDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
-    def __init__(self, area, name, master_area, bridge):
+    def __init__(self, area, area_name, name, master_area, bridge):
         """Initialize the switch."""
-        super().__init__(area, name, master_area, bridge)
+        super().__init__(area, area_name, name, master_area, bridge)
 
     @property
     def category(self):

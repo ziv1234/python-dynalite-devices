@@ -11,7 +11,7 @@ class DynaliteChannelCoverDevice(DynaliteChannelBaseDevice):
 
     def __init__(
         self,
-        area,
+        area,area_name,
         channel,
         name,
         type,
@@ -27,12 +27,16 @@ class DynaliteChannelCoverDevice(DynaliteChannelBaseDevice):
         self._actual_level = 0
         self._target_level = 0
         self._current_position = 0
-        super().__init__(area, channel, name, type, master_area, bridge, device)
+        super().__init__(area, area_name, channel, name, type, master_area, bridge, device)
 
     @property
     def category(self):
         return "cover"
 
+    @property
+    def has_tilt(self):
+        return False
+        
     @property
     def device_class(self):
         return self._device_class
@@ -94,7 +98,7 @@ class DynaliteChannelCoverWithTiltDevice(DynaliteChannelCoverDevice):
 
     def __init__(
         self,
-        area,
+        area, area_name,
         channel,
         name,
         type,
@@ -106,7 +110,7 @@ class DynaliteChannelCoverWithTiltDevice(DynaliteChannelCoverDevice):
         device,
     ):
         super().__init__(
-            area,
+            area,area_name,
             channel,
             name,
             type,
@@ -119,6 +123,10 @@ class DynaliteChannelCoverWithTiltDevice(DynaliteChannelCoverDevice):
         self._tilt_percentage = tilt_percentage
         self._current_tilt = 0
 
+    @property
+    def has_tilt(self):
+        return True
+        
     def update_tilt(self, diff):
         tilt_diff = diff / self._tilt_percentage
         self._current_tilt = max(0, min(1, self._current_tilt + tilt_diff))

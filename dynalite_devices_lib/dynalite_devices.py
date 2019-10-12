@@ -99,7 +99,6 @@ class DynaliteDevices:
         """Set up a Dynalite bridge based on host parameter in the config."""
         loop = self.loop
         LOGGER.debug("bridge async_setup - %s", self.config)
-        loop.set_debug(True)  # XXX
 
         # insert the templates
         if CONF_TEMPLATE not in self.config:
@@ -120,66 +119,62 @@ class DynaliteDevices:
                             ] = DEFAULT_TEMPLATES[template][param]
         # add the entities implicitly defined by templates
         for curArea in self.config[CONF_AREA]:
-            if CONF_TEMPLATE in self.config[CONF_AREA][curArea]:
+            areaConfig = self.config[CONF_AREA][curArea]
+            if CONF_TEMPLATE in areaConfig:
                 template = self.config[CONF_AREA][curArea][CONF_TEMPLATE]
                 if template == CONF_ROOM:
-                    self.config[CONF_AREA][curArea][CONF_NODEFAULT] = True
-                    if CONF_PRESET not in self.config[CONF_AREA][curArea]:
-                        self.config[CONF_AREA][curArea][CONF_PRESET] = {}
+                    areaConfig[CONF_NODEFAULT] = True
+                    if CONF_PRESET not in areaConfig:
+                        areaConfig[CONF_PRESET] = {}
                     roomOn = self.getTemplateIndex(
                         int(curArea), CONF_ROOM, CONF_ROOM_ON
                     )
-                    if str(roomOn) not in self.config[CONF_AREA][curArea][CONF_PRESET]:
-                        self.config[CONF_AREA][curArea][CONF_PRESET][str(roomOn)] = {
+                    if str(roomOn) not in areaConfig[CONF_PRESET]:
+                        areaConfig[CONF_PRESET][str(roomOn)] = {
                             CONF_HIDDENENTITY: True
                         }
                     roomOff = self.getTemplateIndex(
                         int(curArea), CONF_ROOM, CONF_ROOM_OFF
                     )
-                    if str(roomOff) not in self.config[CONF_AREA][curArea][CONF_PRESET]:
-                        self.config[CONF_AREA][curArea][CONF_PRESET][str(roomOff)] = {
+                    if str(roomOff) not in areaConfig[CONF_PRESET]:
+                        areaConfig[CONF_PRESET][str(roomOff)] = {
                             CONF_HIDDENENTITY: True
                         }
                 elif template == CONF_TRIGGER:
-                    if CONF_PRESET not in self.config[CONF_AREA][curArea]:
-                        self.config[CONF_AREA][curArea][CONF_PRESET] = {}
-                    self.config[CONF_AREA][curArea][CONF_NODEFAULT] = True
+                    if CONF_PRESET not in areaConfig:
+                        areaConfig[CONF_PRESET] = {}
+                    areaConfig[CONF_NODEFAULT] = True
                     trigger = self.getTemplateIndex(
                         int(curArea), CONF_TRIGGER, CONF_TRIGGER
                     )
-                    if str(trigger) not in self.config[CONF_AREA][curArea][CONF_PRESET]:
-                        self.config[CONF_AREA][curArea][CONF_PRESET][str(trigger)] = {
+                    if str(trigger) not in areaConfig[CONF_PRESET]:
+                        areaConfig[CONF_PRESET][str(trigger)] = {
                             CONF_HIDDENENTITY: False,
-                            CONF_NAME: self.config[CONF_AREA][curArea][CONF_NAME],
+                            CONF_NAME: areaConfig[CONF_NAME],
                         }
                 elif template == CONF_CHANNELCOVER:
-                    self.config[CONF_AREA][curArea][CONF_NODEFAULT] = True
+                    areaConfig[CONF_NODEFAULT] = True
                     curChannel = self.getTemplateIndex(
                         int(curArea), CONF_CHANNELCOVER, CONF_CHANNEL
                     )
-                    if CONF_CHANNEL not in self.config[CONF_AREA][curArea]:
-                        self.config[CONF_AREA][curArea][CONF_CHANNEL] = {}
-                    if (
-                        str(curChannel)
-                        not in self.config[CONF_AREA][curArea][CONF_CHANNEL]
-                    ):
-                        self.config[CONF_AREA][curArea][CONF_CHANNEL][
-                            str(curChannel)
-                        ] = {
-                            CONF_NAME: self.config[CONF_AREA][curArea][CONF_NAME],
+                    if CONF_CHANNEL not in areaConfig:
+                        areaConfig[CONF_CHANNEL] = {}
+                    if str(curChannel) not in areaConfig[CONF_CHANNEL]:
+                        areaConfig[CONF_CHANNEL][str(curChannel)] = {
+                            CONF_NAME: areaConfig[CONF_NAME],
                             CONF_CHANNELTYPE: "cover",
                             CONF_HIDDENENTITY: False,
                         }
                     if self.getTemplateIndex(
                         curArea, CONF_CHANNELCOVER, CONF_CHANNELCLASS
                     ):
-                        self.config[CONF_AREA][curArea][CONF_CHANNEL][str(curChannel)][
+                        areaConfig[CONF_CHANNEL][str(curChannel)][
                             CONF_CHANNELCLASS
                         ] = self.getTemplateIndex(
                             curArea, CONF_CHANNELCOVER, CONF_CHANNELCLASS
                         )
                     if self.getTemplateIndex(curArea, CONF_CHANNELCOVER, CONF_FACTOR):
-                        self.config[CONF_AREA][curArea][CONF_CHANNEL][str(curChannel)][
+                        areaConfig[CONF_CHANNEL][str(curChannel)][
                             CONF_FACTOR
                         ] = self.getTemplateIndex(
                             curArea, CONF_CHANNELCOVER, CONF_FACTOR
@@ -187,7 +182,7 @@ class DynaliteDevices:
                     if self.getTemplateIndex(
                         curArea, CONF_CHANNELCOVER, CONF_TILTPERCENTAGE
                     ):
-                        self.config[CONF_AREA][curArea][CONF_CHANNEL][str(curChannel)][
+                        areaConfig[CONF_CHANNEL][str(curChannel)][
                             CONF_TILTPERCENTAGE
                         ] = self.getTemplateIndex(
                             curArea, CONF_CHANNELCOVER, CONF_TILTPERCENTAGE
@@ -246,6 +241,7 @@ class DynaliteDevices:
                 newDevice = DynaliteDualPresetSwitchDevice(
                     curArea,
                     self.config[CONF_AREA][curArea][CONF_NAME],
+                    self.config[CONF_AREA][curArea][CONF_NAME],
                     self.getMasterArea(curArea),
                     self,
                 )
@@ -259,11 +255,9 @@ class DynaliteDevices:
         if (
             self.configured
         ):  # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
-            LOGGER.debug("sent category %s device %s" % (category, device))
             if self.newDeviceFunc:
                 self.newDeviceFunc([device])
         else:  # send all the devices together when configured
-            LOGGER.debug("queuing category %s device %s" % (category, device))
             self.waiting_devices.append(device)
 
     @property
@@ -364,7 +358,7 @@ class DynaliteDevices:
             )  # If not explicitly defined, use "areaname presetname"
         curDevice = self._dynalite.devices[CONF_AREA][curArea].preset[curPreset]
         newDevice = DynalitePresetSwitchDevice(
-            curArea, curPreset, curName, self.getMasterArea(curArea), self, curDevice
+            curArea, self.config[CONF_AREA][str(curArea)][CONF_NAME], curPreset, curName, self.getMasterArea(curArea), self, curDevice
         )
         self.registerNewDevice("switch", newDevice)
         if curArea not in self.added_presets:
@@ -479,12 +473,12 @@ class DynaliteDevices:
         hassArea = self.getMasterArea(curArea)
         if channelType == "light":
             newDevice = DynaliteChannelLightDevice(
-                curArea, curChannel, curName, channelType, hassArea, self, curDevice
+                curArea, self.config[CONF_AREA][str(curArea)][CONF_NAME], curChannel, curName, channelType, hassArea, self, curDevice
             )
             self.registerNewDevice("light", newDevice)
         elif channelType == "switch":
             newDevice = DynaliteChannelSwitchDevice(
-                curArea, curChannel, curName, channelType, hassArea, self, curDevice
+                curArea, self.config[CONF_AREA][str(curArea)][CONF_NAME], curChannel, curName, channelType, hassArea, self, curDevice
             )
             self.registerNewDevice("switch", newDevice)
         elif channelType == "cover":
@@ -500,7 +494,7 @@ class DynaliteDevices:
             )
             if CONF_TILTPERCENTAGE in channelConfig:
                 newDevice = DynaliteChannelCoverWithTiltDevice(
-                    curArea,
+                    curArea,self.config[CONF_AREA][str(curArea)][CONF_NAME], 
                     curChannel,
                     curName,
                     channelType,
@@ -513,7 +507,7 @@ class DynaliteDevices:
                 )
             else:
                 newDevice = DynaliteChannelCoverDevice(
-                    curArea,
+                    curArea,self.config[CONF_AREA][str(curArea)][CONF_NAME], 
                     curChannel,
                     curName,
                     channelType,

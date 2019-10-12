@@ -9,10 +9,10 @@ from .dynalitebase import DynaliteChannelBaseDevice
 class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Light."""
 
-    def __init__(self, area, channel, name, type, master_area, bridge, device):
+    def __init__(self, area, area_name, channel, name, type, master_area, bridge, device):
         """Initialize the light."""
         self._level = 0
-        super().__init__(area, channel, name, type, master_area, bridge, device)
+        super().__init__(area, area_name, channel, name, type, master_area, bridge, device)
 
     @property
     def category(self):

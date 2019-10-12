@@ -1,4 +1,4 @@
-"""Support for the Dynalite channels as switches."""
+"""Support for the Dynalite devices."""
 import asyncio
 import logging
 import pprint
@@ -6,9 +6,10 @@ import pprint
 from .const import DOMAIN, LOGGER
 
 
-class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the entity (light, switch, cover, etc.)
-    def __init__(self, area, name, master_area, bridge):
+class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the entity (light, switch, device, etc.)
+    def __init__(self, area, area_name, name, master_area, bridge):
         self._area = area
+        self._area_name = area_name
         self._name = name
         self._master_area = master_area
         self._bridge = bridge
@@ -17,12 +18,17 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
 
     @property
     def name(self):
-        """Return the name of the cover."""
+        """Return the name of the device."""
         return self._name
 
     @property
+    def area_name(self):
+        """Return the name of the device."""
+        return self._area_name
+
+    @property
     def available(self):
-        """Return if cover is available."""
+        """Return if device is available."""
         return self._bridge.available
 
     @property
@@ -54,25 +60,25 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
 
 
 class DynaliteChannelBaseDevice(DynaliteBaseDevice):
-    """Representation of a Dynalite Channel as a Home Assistant Cover."""
+    """Representation of a Dynalite Channel as a Home Assistant device."""
 
-    def __init__(self, area, channel, name, type, master_area, bridge, device):
+    def __init__(self, area, area_name, channel, name, type, master_area, bridge, device):
         self._channel = channel
         self._type = type
         self._device = device
-        super().__init__(area, name, master_area, bridge)
+        super().__init__(area, area_name, name, master_area, bridge)
 
     @property
     def unique_id(self):
-        """Return the ID of this cover."""
+        """Return the ID of this device."""
         return "dynalite_area_" + str(self._area) + "_channel_" + str(self._channel)
 
 
 class DynaliteDualPresetDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
-    def __init__(self, area, name, master_area, bridge):
-        super().__init__(area, name, master_area, bridge)
+    def __init__(self, area, area_name, name, master_area, bridge):
+        super().__init__(area, area_name, name, master_area, bridge)
         self._devices = {}
 
     def get_device(self, devnum):
