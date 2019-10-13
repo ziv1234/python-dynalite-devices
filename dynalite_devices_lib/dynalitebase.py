@@ -1,13 +1,13 @@
 """Support for the Dynalite devices."""
-import asyncio
-import logging
-import pprint
 
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN
 
 
 class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the entity (light, switch, device, etc.)
+    """Base class for Dynalite devices."""
+
     def __init__(self, area, area_name, name, master_area, bridge):
+        """Initialize the device."""
         self._area = area
         self._area_name = area_name
         self._name = name
@@ -23,7 +23,7 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
 
     @property
     def area_name(self):
-        """Return the name of the device."""
+        """Return the name of the area."""
         return self._area_name
 
     @property
@@ -37,10 +37,12 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
         return self._hidden
 
     def set_hidden(self, hidden):
+        """Set device hidden property."""
         self._hidden = hidden
 
     @property
     def device_info(self):
+        """Rerturn the device info."""
         return {
             "identifiers": {(DOMAIN, self.unique_id)},
             "name": self.name,
@@ -49,12 +51,15 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
 
     @property
     def get_master_area(self):
+        """Get the master area when combining entities from different Dynet areas to the same area."""
         return self._master_area
 
     def add_listener(self, listener):
+        """Add a listener for changes."""
         self._listeners.append(listener)
 
     def update_listeners(self):
+        """Update all listeners."""
         for listener in self._listeners:
             listener()
 
@@ -62,7 +67,10 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
 class DynaliteChannelBaseDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant device."""
 
-    def __init__(self, area, area_name, channel, name, type, master_area, bridge, device):
+    def __init__(
+        self, area, area_name, channel, name, type, master_area, bridge, device
+    ):
+        """Initialize the device."""
         self._channel = channel
         self._type = type
         self._device = device
@@ -75,13 +83,15 @@ class DynaliteChannelBaseDevice(DynaliteBaseDevice):
 
 
 class DynaliteDualPresetDevice(DynaliteBaseDevice):
-    """Representation of a Dynalite Preset as a Home Assistant Switch."""
+    """Representation of two Dynalite Presets as an on/off switch."""
 
     def __init__(self, area, area_name, name, master_area, bridge):
+        """Initialize the device."""
         super().__init__(area, area_name, name, master_area, bridge)
         self._devices = {}
 
     def get_device(self, devnum):
+        """Get the first or second device."""
         return self._devices.get(devnum)
 
     @property
@@ -90,10 +100,12 @@ class DynaliteDualPresetDevice(DynaliteBaseDevice):
         return self.get_device(1) and self.get_device(2) and super().available
 
     def set_device(self, devnum, device):
+        """Set one of the attached devices."""
         self._devices[devnum] = device
         device.add_listener(self.listener)
         if self.available:
             self._bridge.updateDevice(self)
 
     def listener(self):
+        """Update the device since its internal devices changed."""
         self._bridge.updateDevice(self)

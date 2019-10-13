@@ -1,8 +1,4 @@
 """Support for the Dynalite channels and presets as switches."""
-import asyncio
-import logging
-from .const import DOMAIN, LOGGER
-import pprint
 
 from .dynalitebase import (
     DynaliteChannelBaseDevice,
@@ -14,13 +10,18 @@ from .dynalitebase import (
 class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Switch."""
 
-    def __init__(self, area, area_name, channel, name, type, master_area, bridge, device):
+    def __init__(
+        self, area, area_name, channel, name, type, master_area, bridge, device
+    ):
         """Initialize the switch."""
         self._level = 0
-        super().__init__(area, area_name, channel, name, type, master_area, bridge, device)
+        super().__init__(
+            area, area_name, channel, name, type, master_area, bridge, device
+        )
 
     @property
     def category(self):
+        """Return the category of the entity: light, switch, or cover."""
         return "switch"
 
     @property
@@ -29,12 +30,15 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
         return self._level > 0
 
     def update_level(self, actual_level, target_level):
+        """Update the current level."""
         self._level = actual_level
 
     async def async_turn_on(self, **kwargs):
+        """Turn switch on."""
         self._device.turnOn()
 
     async def async_turn_off(self, **kwargs):
+        """Turn switch off."""
         self._device.turnOff()
 
 
@@ -50,6 +54,7 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
 
     @property
     def category(self):
+        """Return the category of the entity: light, switch, or cover."""
         return "switch"
 
     @property
@@ -62,17 +67,20 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
         """Return true if device is on."""
         new_level = self._device.active
         if new_level != self._level:
-            self.update_listeners()  # XXX should this move to update_level?
+            self.update_listeners()
         self._level = new_level
         return self._level
 
     def update_level(self, actual_level, target_level):
+        """Update the current level."""
         self._level = actual_level
 
     async def async_turn_on(self, **kwargs):
+        """Turn switch on."""
         self._device.turnOn()
 
     async def async_turn_off(self, **kwargs):
+        """Turn switch off."""
         self._device.turnOff()
 
 
@@ -85,6 +93,7 @@ class DynaliteDualPresetSwitchDevice(DynaliteDualPresetDevice):
 
     @property
     def category(self):
+        """Return the category of the entity: light, switch, or cover."""
         return "switch"
 
     @property
@@ -98,7 +107,9 @@ class DynaliteDualPresetSwitchDevice(DynaliteDualPresetDevice):
         return self.get_device(1).is_on
 
     async def async_turn_on(self, **kwargs):
+        """Turn switch on."""
         await self.get_device(1).async_turn_on()
 
     async def async_turn_off(self, **kwargs):
+        """Turn switch off."""
         await self.get_device(2).async_turn_on()
