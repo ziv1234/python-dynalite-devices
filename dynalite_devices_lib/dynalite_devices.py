@@ -42,7 +42,7 @@ from dynalite_lib import (
     CONF_TRGT_LEVEL,
     CONF_ACT_LEVEL,
     CONF_ALL,
-    Dynalite
+    Dynalite,
 )
 
 from .light import DynaliteChannelLightDevice

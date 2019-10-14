@@ -17,12 +17,14 @@ from dynalite_lib import (
 
 DEFAULT_TEMPLATE_NAMES = [t for t in DEFAULT_TEMPLATES]
 
+
 def numString(value):
     newValue = str(value)
     if newValue.isdigit():
         return newValue
     else:
         raise vol.Invalid("Not a string with numbers")
+
 
 TEMPLATE_ROOM_SCHEMA = vol.Schema(
     {vol.Optional(CONF_ROOM_ON): numString, vol.Optional(CONF_ROOM_OFF): numString}
@@ -144,7 +146,7 @@ BRIDGE_CONFIG_SCHEMA = vol.Schema(
         vol.Optional(CONF_LOGLEVEL): str,
         vol.Optional(CONF_AUTODISCOVER, default=True): vol.Coerce(bool),
         # vol.Optional(CONF_AREACREATE, default=CONF_AREA_CREATE_MANUAL): vol.Any(
-            # CONF_AREA_CREATE_MANUAL, CONF_AREA_CREATE_ASSIGN, CONF_AREA_CREATE_AUTO
+        # CONF_AREA_CREATE_MANUAL, CONF_AREA_CREATE_ASSIGN, CONF_AREA_CREATE_AUTO
         # ),
         vol.Optional(CONF_POLLTIMER, default=1.0): vol.Coerce(float),
         vol.Optional(CONF_AREA): AREA_SCHEMA,
