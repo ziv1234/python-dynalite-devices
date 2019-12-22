@@ -145,9 +145,6 @@ BRIDGE_CONFIG_SCHEMA = vol.Schema(
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
         vol.Optional(CONF_LOGLEVEL): str,
         vol.Optional(CONF_AUTODISCOVER, default=True): vol.Coerce(bool),
-        # vol.Optional(CONF_AREACREATE, default=CONF_AREA_CREATE_MANUAL): vol.Any(
-        # CONF_AREA_CREATE_MANUAL, CONF_AREA_CREATE_ASSIGN, CONF_AREA_CREATE_AUTO
-        # ),
         vol.Optional(CONF_POLLTIMER, default=1.0): vol.Coerce(float),
         vol.Optional(CONF_AREA): AREA_SCHEMA,
         vol.Optional(CONF_DEFAULT): PLATFORM_DEFAULTS_SCHEMA,

@@ -68,12 +68,12 @@ class DynaliteChannelCoverDevice(DynaliteChannelBaseDevice):
     @property
     def is_opening(self):
         """Return whether cover is currently opening."""
-        return self._target_level > self._actual_level
+        return self._current_position < 1 and self._target_level > self._actual_level
 
     @property
     def is_closing(self):
         """Return whether cover is currently closing."""
-        return self._target_level < self._actual_level
+        return self._current_position > 0 and self._target_level < self._actual_level
 
     @property
     def is_closed(self):
