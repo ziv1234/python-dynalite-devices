@@ -485,7 +485,7 @@ class DynaliteDevices:
                 if CONF_CHANNELCLASS in channelConfig
                 else DEFAULT_COVERCHANNELCLASS
             )
-            if CONF_TILTPERCENTAGE in channelConfig:
+            if CONF_TILTPERCENTAGE in channelConfig and channelConfig[CONF_TILTPERCENTAGE] != 0:
                 newDevice = DynaliteChannelCoverWithTiltDevice(
                     curArea,
                     self.config[CONF_AREA][str(curArea)][CONF_NAME],
