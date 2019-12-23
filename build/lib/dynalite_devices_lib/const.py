@@ -1,6 +1,6 @@
 """Constants for the Dynalite component."""
 import logging
-from dynalite_lib import CONF_CHANNEL
+from dynalite_lib import CONF_CHANNEL, CONF_ACTIVE
 
 LOGGER = logging.getLogger(__package__)
 DOMAIN = "dynalite-devices"

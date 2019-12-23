@@ -150,5 +150,6 @@ BRIDGE_CONFIG_SCHEMA = vol.Schema(
         vol.Optional(CONF_DEFAULT): PLATFORM_DEFAULTS_SCHEMA,
         vol.Optional(CONF_PRESET): PRESET_SCHEMA,
         vol.Optional(CONF_TEMPLATE, default=DEFAULT_TEMPLATES): TEMPLATE_SCHEMA,
+        vol.Optional(CONF_ACTIVE, default=False): vol.Coerce(bool),
     }
 )
