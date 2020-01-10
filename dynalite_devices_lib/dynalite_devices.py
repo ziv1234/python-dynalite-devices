@@ -22,6 +22,11 @@ from .const import (
     DEFAULT_CHANNELTYPE,
     CONF_CHANNELCOVER,
     CONF_NONE,
+    CONF_TIMECOVER,
+    CONF_OPENPRESET,
+    CONF_CLOSEPRESET,
+    CONF_STOPPRESET,
+    CONF_DURATION,
 )
 from dynalite_lib import (
     CONF_CHANNEL,
@@ -51,7 +56,8 @@ from .switch import (
     DynalitePresetSwitchDevice,
     DynaliteDualPresetSwitchDevice,
 )
-from .cover import DynaliteChannelCoverDevice, DynaliteChannelCoverWithTiltDevice
+from .cover import DynaliteChannelCoverDevice, DynaliteChannelCoverWithTiltDevice, DynaliteTimeCoverDevice
+from .dynalitebase import DynaliteBaseDevice
 
 
 class BridgeError(Exception):
@@ -78,6 +84,9 @@ class DynaliteDevices:
         self.added_presets = {}
         self.added_channels = {}
         self.added_room_switches = {}
+        self.added_time_covers = {}
+        self.timer_active = False
+        self.timer_callbacks = set()
 
     async def async_setup(self, tries=0):
         """Set up a Dynalite bridge based on host parameter in the config."""
@@ -105,69 +114,34 @@ class DynaliteDevices:
             areaConfig = self.config[CONF_AREA][curArea]
             if CONF_TEMPLATE in areaConfig:
                 template = self.config[CONF_AREA][curArea][CONF_TEMPLATE]
+                template_params = self.getTemplateParams(curArea)
                 if template == CONF_ROOM:
                     areaConfig[CONF_NODEFAULT] = True
-                    if CONF_PRESET not in areaConfig:
-                        areaConfig[CONF_PRESET] = {}
-                    roomOn = self.getTemplateIndex(
-                        int(curArea), CONF_ROOM, CONF_ROOM_ON
-                    )
-                    if str(roomOn) not in areaConfig[CONF_PRESET]:
-                        areaConfig[CONF_PRESET][str(roomOn)] = {CONF_HIDDENENTITY: True}
-                    roomOff = self.getTemplateIndex(
-                        int(curArea), CONF_ROOM, CONF_ROOM_OFF
-                    )
-                    if str(roomOff) not in areaConfig[CONF_PRESET]:
-                        areaConfig[CONF_PRESET][str(roomOff)] = {
-                            CONF_HIDDENENTITY: True
-                        }
+                    for conf in [CONF_ROOM_ON, CONF_ROOM_OFF]:
+                        self.ensurePresetInConfig(curArea, template_params[conf])
+                        areaConfig[conf] = template_params[conf]
                 elif template == CONF_TRIGGER:
-                    if CONF_PRESET not in areaConfig:
-                        areaConfig[CONF_PRESET] = {}
                     areaConfig[CONF_NODEFAULT] = True
-                    trigger = self.getTemplateIndex(
-                        int(curArea), CONF_TRIGGER, CONF_TRIGGER
-                    )
-                    if str(trigger) not in areaConfig[CONF_PRESET]:
-                        areaConfig[CONF_PRESET][str(trigger)] = {
-                            CONF_HIDDENENTITY: False,
-                            CONF_NAME: areaConfig[CONF_NAME],
-                        }
+                    self.ensurePresetInConfig(curArea, template_params[CONF_TRIGGER], False, areaConfig[CONF_NAME])
+                    areaConfig[CONF_TRIGGER] = template_params[CONF_TRIGGER]
                 elif template == CONF_CHANNELCOVER:
                     areaConfig[CONF_NODEFAULT] = True
-                    curChannel = self.getTemplateIndex(
-                        int(curArea), CONF_CHANNELCOVER, CONF_CHANNEL
-                    )
-                    if CONF_CHANNEL not in areaConfig:
-                        areaConfig[CONF_CHANNEL] = {}
-                    if str(curChannel) not in areaConfig[CONF_CHANNEL]:
-                        areaConfig[CONF_CHANNEL][str(curChannel)] = {
-                            CONF_NAME: areaConfig[CONF_NAME],
-                            CONF_CHANNELTYPE: "cover",
-                            CONF_HIDDENENTITY: False,
-                        }
-                    if self.getTemplateIndex(
-                        curArea, CONF_CHANNELCOVER, CONF_CHANNELCLASS
-                    ):
-                        areaConfig[CONF_CHANNEL][str(curChannel)][
-                            CONF_CHANNELCLASS
-                        ] = self.getTemplateIndex(
-                            curArea, CONF_CHANNELCOVER, CONF_CHANNELCLASS
-                        )
-                    if self.getTemplateIndex(curArea, CONF_CHANNELCOVER, CONF_FACTOR):
-                        areaConfig[CONF_CHANNEL][str(curChannel)][
-                            CONF_FACTOR
-                        ] = self.getTemplateIndex(
-                            curArea, CONF_CHANNELCOVER, CONF_FACTOR
-                        )
-                    if self.getTemplateIndex(
-                        curArea, CONF_CHANNELCOVER, CONF_TILTPERCENTAGE
-                    ):
-                        areaConfig[CONF_CHANNEL][str(curChannel)][
-                            CONF_TILTPERCENTAGE
-                        ] = self.getTemplateIndex(
-                            curArea, CONF_CHANNELCOVER, CONF_TILTPERCENTAGE
-                        )
+                    curChannel = template_params[CONF_CHANNEL]
+                    self.ensureChannelInConfig(curArea, curChannel, False, areaConfig[CONF_NAME])
+                    areaConfig[CONF_CHANNEL][str(curChannel)][CONF_CHANNELTYPE] = "cover"
+                    for conf in [CONF_CHANNELCLASS, CONF_FACTOR, CONF_TILTPERCENTAGE]:
+                        areaConfig[CONF_CHANNEL][str(curChannel)][conf] = template_params[conf]
+                elif template == CONF_TIMECOVER:
+                    areaConfig[CONF_NODEFAULT] = True
+                    curChannel = template_params[CONF_CHANNEL]
+                    if int(curChannel) > 0:
+                        areaConfig[CONF_CHANNELCOVER] = curChannel
+                        self.ensureChannelInConfig(curArea, curChannel)
+                    for conf in [CONF_OPENPRESET, CONF_CLOSEPRESET, CONF_STOPPRESET]:
+                        self.ensurePresetInConfig(curArea, template_params[conf])
+                        areaConfig[conf] = template_params[conf]
+                    for conf in [CONF_CHANNELCLASS, CONF_DURATION]:
+                        areaConfig[conf] = template_params[conf]
         LOGGER.debug("bridge async_setup (after templates) - %s" % self.config)
 
         # Configure the dynalite object
@@ -195,33 +169,83 @@ class DynaliteDevices:
         # register the rooms (switches on presets 1/4)
         self.registerRooms()
 
+        # register the time covers
+        self.registerTimeCovers()
+
         return True
+
+    def ensurePresetInConfig(self, area, preset, hidden=True, name=None):
+        areaConfig = self.config[CONF_AREA][area]
+        if CONF_PRESET not in areaConfig:
+            areaConfig[CONF_PRESET] = {}
+        if str(preset) not in areaConfig[CONF_PRESET]:
+            curConf = {CONF_HIDDENENTITY: hidden}
+            if name:
+                curConf[CONF_NAME] = name
+            areaConfig[CONF_PRESET][str(preset)] = curConf
+
+    def ensureChannelInConfig(self, area, channel, hidden=True, name=None):
+        areaConfig = self.config[CONF_AREA][area]
+        if CONF_CHANNEL not in areaConfig:
+            areaConfig[CONF_CHANNEL] = {}
+        if str(channel) not in areaConfig[CONF_CHANNEL]:
+            curConf = {CONF_HIDDENENTITY: hidden}
+            if name:
+                curConf[CONF_NAME] = name
+            areaConfig[CONF_CHANNEL][str(channel)] = curConf
 
     def registerRooms(self):
         """Register the room switches from two normal presets each."""
-        for curArea in self.config[CONF_AREA]:
-            if (
-                CONF_TEMPLATE in self.config[CONF_AREA][curArea]
-                and self.config[CONF_AREA][curArea][CONF_TEMPLATE] == CONF_ROOM
-            ):
+        for curArea, areaConfig in self.config[CONF_AREA].items():
+            if CONF_TEMPLATE in areaConfig and areaConfig[CONF_TEMPLATE] == CONF_ROOM:
                 newDevice = DynaliteDualPresetSwitchDevice(
                     curArea,
-                    self.config[CONF_AREA][curArea][CONF_NAME],
-                    self.config[CONF_AREA][curArea][CONF_NAME],
+                    areaConfig[CONF_NAME],
+                    areaConfig[CONF_NAME],
                     self.getMasterArea(curArea),
                     self,
                 )
                 self.added_room_switches[int(curArea)] = newDevice
-                self.setPresetIfReady(curArea, CONF_ROOM, CONF_ROOM_ON, 1, newDevice)
-                self.setPresetIfReady(curArea, CONF_ROOM, CONF_ROOM_OFF, 2, newDevice)
+                self.setPresetIfReady(curArea, areaConfig[CONF_ROOM_ON], 1, newDevice)
+                self.setPresetIfReady(curArea, areaConfig[CONF_ROOM_OFF], 2, newDevice)
                 self.registerNewDevice("switch", newDevice)
+
+    def registerTimeCovers(self):
+        """Register the time covers from three presets and a channel each."""
+        for curArea, areaConfig in self.config[CONF_AREA].items():
+            if CONF_TEMPLATE in areaConfig and areaConfig[CONF_TEMPLATE] == CONF_TIMECOVER:
+                newDevice = DynaliteTimeCoverDevice(
+                    curArea,
+                    areaConfig[CONF_NAME],
+                    areaConfig[CONF_NAME],
+                    areaConfig[CONF_DURATION],
+                    areaConfig[CONF_CHANNELCLASS],
+                    self.getMasterArea(curArea),
+                    self,
+                )
+                self.added_time_covers[int(curArea)] = newDevice
+                self.setPresetIfReady(curArea, areaConfig[CONF_OPENPRESET], 1, newDevice)
+                self.setPresetIfReady(curArea, areaConfig[CONF_CLOSEPRESET], 2, newDevice)
+                self.setPresetIfReady(curArea, areaConfig[CONF_STOPPRESET], 3, newDevice)
+                if CONF_CHANNELCOVER in areaConfig:
+                    self.setChannelIfReady(curArea, areaConfig[CONF_CHANNELCOVER], 4, newDevice)
+                else:
+                    # No channel attached, only presets.
+                    dummyDevice = DynaliteBaseDevice(
+                        curArea,
+                        areaConfig[CONF_NAME],
+                        areaConfig[CONF_NAME],
+                        self.getMasterArea(curArea),
+                        self,
+                    )
+                    newDevice.set_device(4, dummyDevice)
+                self.registerNewDevice("cover", newDevice)
 
     def registerNewDevice(self, category, device):
         """Register a new device and group all the ones prior to CONFIGURED event together."""
         self.devices.append(device)
-        if (
-            self.configured
-        ):  # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
+        # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
+        if self.configured:  
             if self.newDeviceFunc:
                 self.newDeviceFunc([device])
         else:  # send all the devices together when configured
@@ -239,9 +263,8 @@ class DynaliteDevices:
 
     def getTemplateIndex(self, area, template, conf):
         """Get a specific index from a specific template in an area."""
-        my_template = self.config[CONF_TEMPLATE][
-            template
-        ]  # always defined either by the user or by the defaults
+        # always defined either by the user or by the defaults
+        my_template = self.config[CONF_TEMPLATE][template]  
         index = None
         if conf in my_template:
             index = my_template[conf]
@@ -251,14 +274,31 @@ class DynaliteDevices:
             pass
         return index
 
-    def setPresetIfReady(self, area, template, conf, deviceNum, dualDevice):
-        """Try to set a preset of a dual device if it was already registered."""
-        preset = self.getTemplateIndex(area, template, conf)
-        if not preset:
-            return
+    def getTemplateParams(self, area):
+        """Extract all the parameters of a template."""
+        result = {}
+        area_config = self.config[CONF_AREA][str(area)]
+        template = area_config.get(CONF_TEMPLATE)
+        if not template:
+            return result
+        for conf in self.config[CONF_TEMPLATE][template]:
+            value = self.getTemplateIndex(area, template, conf)
+            result[conf] = value
+        return result
+
+    def setPresetIfReady(self, area, preset, deviceNum, multiDevice):
+        """Try to set a preset of a multi device if it was already registered."""
         try:
             device = self.added_presets[int(area)][int(preset)]
-            dualDevice.set_device(deviceNum, device)
+            multiDevice.set_device(deviceNum, device)
+        except KeyError:
+            pass
+
+    def setChannelIfReady(self, area, channel, deviceNum, multiDevice):
+        """Try to set a preset of a multi device if it was already registered."""
+        try:
+            device = self.added_channels[int(area)][int(channel)]
+            multiDevice.set_device(deviceNum, device)
         except KeyError:
             pass
 
@@ -308,30 +348,24 @@ class DynaliteDevices:
         if str(curArea) not in self.config[CONF_AREA]:
             LOGGER.debug("adding area " + str(curArea) + " that is not in config")
             self.config[CONF_AREA][str(curArea)] = {CONF_NAME: "Area " + str(curArea)}
+        areaConfig = self.config[CONF_AREA][str(curArea)]
 
         try:
-            curName = self.config[CONF_AREA][str(curArea)][CONF_PRESET][str(curPreset)][
-                CONF_NAME
-            ]  # If the name is explicitly defined, use it
+            # If the name is explicitly defined, use it
+            curName = areaConfig[CONF_PRESET][str(curPreset)][CONF_NAME]  
         except KeyError:
             presetName = "Preset " + str(curPreset)
-            if (
-                CONF_NODEFAULT not in self.config[CONF_AREA][str(curArea)]
-                or not self.config[CONF_AREA][str(curArea)][CONF_NODEFAULT]
-            ):
+            if CONF_NODEFAULT not in areaConfig or not areaConfig[CONF_NODEFAULT]:
                 try:
-                    presetName = self.config[CONF_PRESET][str(curPreset)][
-                        CONF_NAME
-                    ]  # XXX need to check for nodefault flag
+                    presetName = self.config[CONF_PRESET][str(curPreset)][CONF_NAME]
                 except KeyError:
                     pass
-            curName = (
-                self.config[CONF_AREA][str(curArea)][CONF_NAME] + " " + presetName
-            )  # If not explicitly defined, use "areaname presetname"
+            # If not explicitly defined, use "areaname presetname"
+            curName = areaConfig[CONF_NAME] + " " + presetName  
         curDevice = self._dynalite.devices[CONF_AREA][curArea].preset[curPreset]
         newDevice = DynalitePresetSwitchDevice(
             curArea,
-            self.config[CONF_AREA][str(curArea)][CONF_NAME],
+            areaConfig[CONF_NAME],
             curPreset,
             curName,
             self.getMasterArea(curArea),
@@ -344,38 +378,40 @@ class DynaliteDevices:
         self.added_presets[curArea][curPreset] = newDevice
 
         try:
-            hidden = self.config[CONF_AREA][str(curArea)][CONF_PRESET][str(curPreset)][
-                CONF_HIDDENENTITY
-            ]
+            hidden = areaConfig[CONF_PRESET][str(curPreset)][CONF_HIDDENENTITY]
         except KeyError:
             hidden = False
 
         try:
-            template = self.config[CONF_AREA][str(curArea)][
-                CONF_TEMPLATE
-            ]  # templates may make some elements hidden
+            # templates may make some elements hidden or register the preset
+            template = areaConfig[CONF_TEMPLATE]  
             if template == CONF_ROOM:
-                hidden = (
-                    True
-                )  # in a template room, the presets will all be in the room switch
-                if (
-                    int(curArea) in self.added_room_switches
-                ):  # if it is not there yet, it will be added when the room switch will be created
-                    roomSwitch = self.added_room_switches[int(curArea)]
-                    if int(curPreset) == int(
-                        self.getTemplateIndex(curArea, CONF_ROOM, CONF_ROOM_ON)
-                    ):
-                        roomSwitch.set_device(1, newDevice)
-                    if int(curPreset) == int(
-                        self.getTemplateIndex(curArea, CONF_ROOM, CONF_ROOM_OFF)
-                    ):
-                        roomSwitch.set_device(2, newDevice)
+                # in a template room, the presets will all be in the room switch
+                hidden = True  
+                # if it is not there yet, it will be added when the room switch will be created
+                if int(curArea) in self.added_room_switches:  
+                    multiDevice = self.added_room_switches[int(curArea)]
+                    if int(curPreset) == int(areaConfig[CONF_ROOM_ON]):
+                        multiDevice.set_device(1, newDevice)
+                    if int(curPreset) == int(areaConfig[CONF_ROOM_OFF]):
+                        multiDevice.set_device(2, newDevice)
             elif template == CONF_TRIGGER:
-                triggerPreset = self.getTemplateIndex(curArea, template, CONF_TRIGGER)
-                if int(curPreset) != int(triggerPreset):
+                if int(curPreset) != areaConfig[CONF_TRIGGER]:
                     hidden = True
             elif template in [CONF_HIDDENENTITY, CONF_CHANNELCOVER]:
                 hidden = True
+            elif template == CONF_TIMECOVER:
+                # in a template room, the presets will all be in the time cover
+                hidden = True  
+                # if it is not there yet, it will be added when the time cover will be created
+                if int(curArea) in self.added_time_covers:
+                    multiDevice = self.added_time_covers[int(curArea)]
+                    if int(curPreset) == int(areaConfig[CONF_OPENPRESET]):
+                        multiDevice.set_device(1, newDevice)
+                    if int(curPreset) == int(areaConfig[CONF_CLOSEPRESET]):
+                        multiDevice.set_device(2, newDevice)
+                    if int(curPreset) == int(areaConfig[CONF_STOPPRESET]):
+                        multiDevice.set_device(3, newDevice)
             else:
                 LOGGER.error(
                     "Unknown template "
@@ -423,24 +459,17 @@ class DynaliteDevices:
         if str(curArea) not in self.config[CONF_AREA]:
             LOGGER.debug("adding area " + str(curArea) + " that is not in config")
             self.config[CONF_AREA][str(curArea)] = {CONF_NAME: "Area " + str(curArea)}
+        areaConfig = self.config[CONF_AREA][str(curArea)]
 
         try:
-            curName = self.config[CONF_AREA][str(curArea)][CONF_CHANNEL][
-                str(curChannel)
-            ][
-                CONF_NAME
-            ]  # If the name is explicitly defined, use it
+            # If the name is explicitly defined, use it
+            curName = areaConfig[CONF_CHANNEL][str(curChannel)][CONF_NAME]  
         except (KeyError, TypeError):
-            curName = (
-                self.config[CONF_AREA][str(curArea)][CONF_NAME]
-                + " Channel "
-                + str(curChannel)
-            )  # If not explicitly defined, use "areaname Channel X"
+            # If not explicitly defined, use "areaname Channel X"
+            curName = areaConfig[CONF_NAME] + " Channel " + str(curChannel)
         curDevice = self._dynalite.devices[CONF_AREA][curArea].channel[curChannel]
         try:
-            channelConfig = self.config[CONF_AREA][str(curArea)][CONF_CHANNEL][
-                str(curChannel)
-            ]
+            channelConfig = areaConfig[CONF_CHANNEL][str(curChannel)]
         except KeyError:
             channelConfig = None
         LOGGER.debug("handleNewChannel - channelConfig=%s" % channelConfig)
@@ -453,7 +482,7 @@ class DynaliteDevices:
         if channelType == "light":
             newDevice = DynaliteChannelLightDevice(
                 curArea,
-                self.config[CONF_AREA][str(curArea)][CONF_NAME],
+                areaConfig[CONF_NAME],
                 curChannel,
                 curName,
                 channelType,
@@ -465,7 +494,7 @@ class DynaliteDevices:
         elif channelType == "switch":
             newDevice = DynaliteChannelSwitchDevice(
                 curArea,
-                self.config[CONF_AREA][str(curArea)][CONF_NAME],
+                areaConfig[CONF_NAME],
                 curChannel,
                 curName,
                 channelType,
@@ -488,7 +517,7 @@ class DynaliteDevices:
             if CONF_TILTPERCENTAGE in channelConfig and channelConfig[CONF_TILTPERCENTAGE] != 0:
                 newDevice = DynaliteChannelCoverWithTiltDevice(
                     curArea,
-                    self.config[CONF_AREA][str(curArea)][CONF_NAME],
+                    areaConfig[CONF_NAME],
                     curChannel,
                     curName,
                     channelType,
@@ -502,7 +531,7 @@ class DynaliteDevices:
             else:
                 newDevice = DynaliteChannelCoverDevice(
                     curArea,
-                    self.config[CONF_AREA][str(curArea)][CONF_NAME],
+                    areaConfig[CONF_NAME],
                     curChannel,
                     curName,
                     channelType,
@@ -523,10 +552,20 @@ class DynaliteDevices:
             newDevice.set_hidden(True)
         if self.config[CONF_AREA][str(curArea)].get(CONF_TEMPLATE) == CONF_HIDDENENTITY:
             newDevice.set_hidden(True)
-        LOGGER.debug(
-            "Creating Dynalite channel area=%s channel=%s name=%s"
-            % (curArea, curChannel, curName)
-        )
+        LOGGER.debug("Creating Dynalite channel area=%s channel=%s name=%s", curArea, curChannel, curName)
+        # if it is a channel from a timecover, register it
+        try:
+            template = areaConfig[CONF_TEMPLATE]  
+            if template == CONF_TIMECOVER:
+                # in a template room, the channels will all be in the time cover
+                hidden = True  
+                # if it is not there yet, it will be added when the time cover will be created
+                if int(curArea) in self.added_time_covers:  
+                    multiDevice = self.added_time_covers[int(curArea)]
+                    if int(curChannel) == int(areaConfig[CONF_CHANNELCOVER]):
+                        multiDevice.set_device(4, newDevice)
+        except KeyError:
+            pass
 
     def handleChannelChange(self, event=None, dynalite=None):
         """Change the level of a channel."""
@@ -540,26 +579,57 @@ class DynaliteDevices:
         if CONF_CHANNEL not in event.data:
             return
         curChannel = event.data[CONF_CHANNEL]
-        if CONF_TRGT_LEVEL not in event.data:
-            return
 
         action = event.data[CONF_ACTION]
         if action == CONF_ACTION_REPORT:
             actual_level = (255 - event.data[CONF_ACT_LEVEL]) / 254
             target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
         elif action == CONF_ACTION_CMD:
-            target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
-            actual_level = (
-                target_level
-            )  # when there is only a "set channel level" command, assume that this is both the actual and the target
+            if CONF_TRGT_LEVEL in event.data:
+                target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
+                # when there is only a "set channel level" command, assume that this is both the actual and the target
+                actual_level = target_level
+            else: # stop fade command
+                try:
+                    if curChannel == CONF_ALL:
+                        for channel in self.added_channels[int(curArea)]:
+                            channelToSet = self.added_channels[int(curArea)][channel]
+                            channelToSet.stop_fade()
+                            self.updateDevice(channelToSet)  
+                    else:
+                        channelToSet = self.added_channels[int(curArea)][int(curChannel)]
+                        channelToSet.stop_fade()
+                        self.updateDevice(channelToSet)  
+                except KeyError:
+                    pass
+                return
         else:
             LOGGER.error("unknown action for channel change %s", action)
             return
         try:
             channelToSet = self.added_channels[int(curArea)][int(curChannel)]
             channelToSet.update_level(actual_level, target_level)
-            self.updateDevice(
-                channelToSet
-            )  # to only call if it was already added to ha
+            # to only call if it was already added to ha
+            self.updateDevice(channelToSet)  
         except KeyError:
             pass
+            
+    def add_timer_listener(self, callback_func):
+        # LOGGER.debug("XXX add timer %s", callback_func)
+        self.timer_callbacks.add(callback_func)
+        if not self.timer_active:
+            self.loop.call_later(1, self.timer_func)
+            self.timer_active = True
+            
+    def remove_timer_listener(self, callback_func):
+        # LOGGER.debug("XXX remove timer %s", callback_func)
+        self.timer_callbacks.discard(callback_func)
+        
+    def timer_func(self):
+        if self.timer_callbacks:
+            for callback in self.timer_callbacks:
+                self.loop.call_soon(callback)
+            self.loop.call_later(1, self.timer_func)
+        else:
+            self.timer_active = False
+        

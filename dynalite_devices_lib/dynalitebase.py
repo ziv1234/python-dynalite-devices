@@ -58,10 +58,10 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
         """Add a listener for changes."""
         self._listeners.append(listener)
 
-    def update_listeners(self):
+    def update_listeners(self, stop_fade=False):
         """Update all listeners."""
         for listener in self._listeners:
-            listener()
+            listener(self, stop_fade)
 
 
 class DynaliteChannelBaseDevice(DynaliteBaseDevice):
@@ -81,14 +81,18 @@ class DynaliteChannelBaseDevice(DynaliteBaseDevice):
         """Return the ID of this device."""
         return "dynalite_area_" + str(self._area) + "_channel_" + str(self._channel)
 
+    def stop_fade(self):
+        """Update the listeners if STOP FADE is received."""
+        self.update_listeners(True)
 
-class DynaliteDualPresetDevice(DynaliteBaseDevice):
+class DynaliteMultiDevice(DynaliteBaseDevice):
     """Representation of two Dynalite Presets as an on/off switch."""
 
-    def __init__(self, area, area_name, name, master_area, bridge):
+    def __init__(self, num_devices, area, area_name, name, master_area, bridge):
         """Initialize the device."""
         super().__init__(area, area_name, name, master_area, bridge)
         self._devices = {}
+        self._num_devices = num_devices
 
     def get_device(self, devnum):
         """Get the first or second device."""
@@ -97,7 +101,10 @@ class DynaliteDualPresetDevice(DynaliteBaseDevice):
     @property
     def available(self):
         """Return if dual device is available."""
-        return self.get_device(1) and self.get_device(2) and super().available
+        for i in range(1, self._num_devices + 1):
+            if not self.get_device(i):
+                return False
+        return super().available
 
     def set_device(self, devnum, device):
         """Set one of the attached devices."""
@@ -106,6 +113,6 @@ class DynaliteDualPresetDevice(DynaliteBaseDevice):
         if self.available:
             self._bridge.updateDevice(self)
 
-    def listener(self):
+    def listener(self, device, stop_fade):
         """Update the device since its internal devices changed."""
         self._bridge.updateDevice(self)
