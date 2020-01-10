@@ -10,18 +10,23 @@ CONF_AREAOVERRIDE = "areaoverride"
 CONF_CHANNELCOVER = "channelcover"
 CONF_CHANNELTYPE = "type"
 CONF_CHANNELCLASS = "class"
+CONF_CLOSEPRESET = "close"
+CONF_DURATION = "duration"
 CONF_FACTOR = "factor"
 CONF_HIDDENENTITY = "hidden"
 CONF_HOST = "host"
 CONF_NAME = "name"
 CONF_NONE = "none"
+CONF_OPENPRESET = "open"
 CONF_PORT = "port"
 CONF_ROOM = "room"
 CONF_ROOM_ON = "room_on"
 CONF_ROOM_OFF = "room_off"
+CONF_STOPPRESET = "stop"
 CONF_TEMPLATE = "template"
 CONF_TEMPLATEOVERRIDE = "templateoverride"
 CONF_TILTPERCENTAGE = "tilt"
+CONF_TIMECOVER = "timecover"
 CONF_TRIGGER = "trigger"
 
 ATTR_BRIGHTNESS = "brightness"
@@ -42,5 +47,13 @@ DEFAULT_TEMPLATES = {
         CONF_CHANNEL: "1",
         CONF_CHANNELCLASS: DEFAULT_COVERCHANNELCLASS,
         CONF_FACTOR: DEFAULT_COVERFACTOR,
+    },
+    CONF_TIMECOVER: {
+        CONF_CHANNEL: "1",
+        CONF_CHANNELCLASS: DEFAULT_COVERCHANNELCLASS,
+        CONF_OPENPRESET: "1",
+        CONF_CLOSEPRESET: "2",
+        CONF_STOPPRESET: "4",
+        CONF_DURATION: 60,
     },
 }

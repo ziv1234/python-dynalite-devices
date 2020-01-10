@@ -27,13 +27,21 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
         return self._level * 255
 
     @property
+    def level(self):
+        """Return the brightness of this light between 0..1."""
+        return self._level
+
+    @property
     def is_on(self):
         """Return true if device is on."""
         return self._level > 0
 
     def update_level(self, actual_level, target_level):
         """Update the current level."""
+        old_level = self._level
         self._level = actual_level
+        if self._level != old_level:
+            self.update_listeners()
 
     async def async_turn_on(self, **kwargs):
         """Turn light on."""

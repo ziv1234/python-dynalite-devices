@@ -3,7 +3,7 @@
 from .dynalitebase import (
     DynaliteChannelBaseDevice,
     DynaliteBaseDevice,
-    DynaliteDualPresetDevice,
+    DynaliteMultiDevice,
 )
 
 
@@ -63,12 +63,16 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
         return "dynalite_area_" + str(self._area) + "_preset_" + str(self._preset)
 
     @property
+    def level(self):
+        return self._level
+
+    @property
     def is_on(self):
         """Return true if device is on."""
-        new_level = self._device.active
-        if new_level != self._level:
+        old_level = self._level
+        self._level = self._device.active
+        if old_level != self._level:
             self.update_listeners()
-        self._level = new_level
         return self._level
 
     def update_level(self, actual_level, target_level):
@@ -84,12 +88,12 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
         self._device.turnOff()
 
 
-class DynaliteDualPresetSwitchDevice(DynaliteDualPresetDevice):
+class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
     def __init__(self, area, area_name, name, master_area, bridge):
         """Initialize the switch."""
-        super().__init__(area, area_name, name, master_area, bridge)
+        super().__init__(2, area, area_name, name, master_area, bridge)
 
     @property
     def category(self):
