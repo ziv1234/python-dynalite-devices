@@ -287,12 +287,18 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         position_diff = target_position - self._current_position
         if position_diff > 0:
             await self.async_open_cover()
-            await asyncio.sleep(position_diff * self._duration)
+            while self._current_position < target_position and self._direction == "open":
+                LOGGER.debug("XXX position current=%s target=%s direction=%s", self._current_position, target_position, self._direction)
+                await asyncio.sleep(1)
+            LOGGER.debug("XXX last position current=%s target=%s direction=%s", self._current_position, target_position, self._direction)
             if self._direction == "open":
                 await self.async_stop_cover()
         elif position_diff < 0:
             await self.async_close_cover()
-            await asyncio.sleep(-position_diff * self._duration)
+            while self._current_position > target_position and self._direction == "close":
+                LOGGER.debug("XXX position current=%s target=%s direction=%s", self._current_position, target_position, self._direction)
+                await asyncio.sleep(1)
+            LOGGER.debug("XXX last position current=%s target=%s direction=%s", self._current_position, target_position, self._direction)
             if self._direction == "close":
                 await self.async_stop_cover()
         else:
