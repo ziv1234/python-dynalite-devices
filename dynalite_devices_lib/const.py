@@ -26,6 +26,7 @@ CONF_STOPPRESET = "stop"
 CONF_TEMPLATE = "template"
 CONF_TEMPLATEOVERRIDE = "templateoverride"
 CONF_TILTPERCENTAGE = "tilt"
+CONF_TILTTIME = "tilt"
 CONF_TIMECOVER = "timecover"
 CONF_TRIGGER = "trigger"
 
@@ -55,5 +56,6 @@ DEFAULT_TEMPLATES = {
         CONF_CLOSEPRESET: "2",
         CONF_STOPPRESET: "4",
         CONF_DURATION: 60,
+        CONF_TILTTIME: 0,
     },
 }

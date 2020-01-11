@@ -2,7 +2,7 @@
 from .const import ATTR_POSITION, ATTR_TILT_POSITION, LOGGER
 
 from .dynalitebase import DynaliteChannelBaseDevice, DynaliteMultiDevice
-
+import asyncio
 
 class DynaliteChannelCoverDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover."""
@@ -245,10 +245,11 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
                 self._bridge.remove_timer_listener(self.timer_callback)
         elif self._direction == "stop":
             self._bridge.remove_timer_listener(self.timer_callback)
-        self._bridge.updateDevice(self)
 
         if getattr(self, "update_tilt", False):
-            self.update_tilt(factored_diff)
+            self.update_tilt()
+
+        self._bridge.updateDevice(self)
 
     @property
     def current_cover_position(self):
@@ -285,12 +286,12 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         target_position = kwargs[ATTR_POSITION] / 100
         position_diff = target_position - self._current_position
         if position_diff > 0:
-            await self.open_cover()
+            await self.async_open_cover()
             await asyncio.sleep(position_diff * self._duration)
             if self._direction == "open":
                 await self.async_stop_cover()
         elif position_diff < 0:
-            await self.close_cover()
+            await self.async_close_cover()
             await asyncio.sleep(-position_diff * self._duration)
             if self._direction == "close":
                 await self.async_stop_cover()
@@ -303,32 +304,32 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         self.update_level(self._current_position, self._current_position)
         
     def listener(self, device, stop_fade):
-        # LOGGER.debug("XXX listener device=%s", device.unique_id)
+        LOGGER.debug("XXX listener device=%s", device.unique_id)
         if device == self.get_device(1):
-            # LOGGER.debug("XXX listener open level=%s", device.level)
+            LOGGER.debug("XXX listener open level=%s", device.level)
             if device.level > 0:
-                # LOGGER.debug("XXX listener activate")
+                LOGGER.debug("XXX listener activate")
                 self.update_level(self._current_position, 1.0)
         elif device == self.get_device(2):
-            # LOGGER.debug("XXX listener close level=%s", device.level)
+            LOGGER.debug("XXX listener close level=%s", device.level)
             if device.level > 0:
-                # LOGGER.debug("XXX listener activate")
+                LOGGER.debug("XXX listener activate")
                 self.update_level(self._current_position, 0.0)
         elif device == self.get_device(3):
-            # LOGGER.debug("XXX listener stop level=%s", device.level)
+            LOGGER.debug("XXX listener stop level=%s", device.level)
             if device.level > 0:
-                # LOGGER.debug("XXX listener activate")
+                LOGGER.debug("XXX listener activate")
                 self.update_level(self._current_position, self._current_position)
         elif device == self.get_device(4):
-            # LOGGER.debug("XXX listener stop level=%s stop=%s", device.level, stop_fade)
-            if stop_fade:
-                # LOGGER.debug("XXX listener channel stop")
+            LOGGER.debug("XXX listener stop level=%s stop=%s", device.level, stop_fade)
+            if stop_fade or device.direction == "stop":
+                LOGGER.debug("XXX listener channel stop")
                 self.update_level(self._current_position, self._current_position)
-            elif device.level > self._current_position:
-                # LOGGER.debug("XXX listener channel open")
+            elif device.direction == "open":
+                LOGGER.debug("XXX listener channel open")
                 self.update_level(self._current_position, 1.0)
             else:
-                # LOGGER.debug("XXX listener channel close")
+                LOGGER.debug("XXX listener channel close")
                 self.update_level(self._current_position, 0.0)
                 
         else:
@@ -342,30 +343,24 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
         self,
         area,
         area_name,
-        channel,
         name,
-        type,
+        duration,
         device_class,
-        cover_factor,
-        tilt_percentage,
+        tilt_duration,
         master_area,
         bridge,
-        device,
     ):
         """Initialize the cover."""
         super().__init__(
             area,
             area_name,
-            channel,
             name,
-            type,
+            duration,
             device_class,
-            cover_factor,
             master_area,
             bridge,
-            device,
         )
-        self._tilt_percentage = tilt_percentage
+        self._tilt_duration = tilt_duration
         self._current_tilt = 0
 
     @property
@@ -373,9 +368,16 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
         """Return whether cover supports tilt."""
         return True
 
-    def update_tilt(self, diff):
+    def update_tilt(self):
         """Update the current tilt based on diff and tilt_percentage."""
-        tilt_diff = diff / self._tilt_percentage
+        if self._direction == "open":
+            mult = 1
+        elif self._direction == "close":
+            mult = -1
+        else:
+            LOGGER.error("update_tilt called with invalid direction %s", self._direction)
+            return
+        tilt_diff = mult / self._tilt_duration
         self._current_tilt = max(0, min(1, self._current_tilt + tilt_diff))
 
     @property
@@ -385,7 +387,8 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
 
     async def apply_tilt_diff(self, tilt_diff):
         """Move the cover up or down based on a diff."""
-        position_diff = tilt_diff * self._tilt_percentage
+        factor = self._tilt_duration / self._duration
+        position_diff = tilt_diff * factor
         target_position = int(
             100 * max(0, min(1, self._current_position + position_diff))
         )

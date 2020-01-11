@@ -48,7 +48,8 @@ TEMPLATE_TIMECOVER_SCHEMA = vol.Schema(
         vol.Optional(CONF_OPENPRESET): numString,
         vol.Optional(CONF_CLOSEPRESET): numString,
         vol.Optional(CONF_STOPPRESET): numString,
-        vol.Optional(CONF_DURATION): vol.Coerce(float)
+        vol.Optional(CONF_DURATION): vol.Coerce(float),
+        vol.Optional(CONF_TILTTIME): vol.Coerce(float),
     }
 )
 

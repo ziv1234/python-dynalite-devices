@@ -27,6 +27,7 @@ from .const import (
     CONF_CLOSEPRESET,
     CONF_STOPPRESET,
     CONF_DURATION,
+    CONF_TILTTIME,
 )
 from dynalite_lib import (
     CONF_CHANNEL,
@@ -56,7 +57,7 @@ from .switch import (
     DynalitePresetSwitchDevice,
     DynaliteDualPresetSwitchDevice,
 )
-from .cover import DynaliteChannelCoverDevice, DynaliteChannelCoverWithTiltDevice, DynaliteTimeCoverDevice
+from .cover import DynaliteChannelCoverDevice, DynaliteChannelCoverWithTiltDevice, DynaliteTimeCoverDevice, DynaliteTimeCoverWithTiltDevice
 from .dynalitebase import DynaliteBaseDevice
 
 
@@ -140,7 +141,7 @@ class DynaliteDevices:
                     for conf in [CONF_OPENPRESET, CONF_CLOSEPRESET, CONF_STOPPRESET]:
                         self.ensurePresetInConfig(curArea, template_params[conf])
                         areaConfig[conf] = template_params[conf]
-                    for conf in [CONF_CHANNELCLASS, CONF_DURATION]:
+                    for conf in [CONF_CHANNELCLASS, CONF_DURATION, CONF_TILTTIME]:
                         areaConfig[conf] = template_params[conf]
         LOGGER.debug("bridge async_setup (after templates) - %s" % self.config)
 
@@ -214,15 +215,27 @@ class DynaliteDevices:
         """Register the time covers from three presets and a channel each."""
         for curArea, areaConfig in self.config[CONF_AREA].items():
             if CONF_TEMPLATE in areaConfig and areaConfig[CONF_TEMPLATE] == CONF_TIMECOVER:
-                newDevice = DynaliteTimeCoverDevice(
-                    curArea,
-                    areaConfig[CONF_NAME],
-                    areaConfig[CONF_NAME],
-                    areaConfig[CONF_DURATION],
-                    areaConfig[CONF_CHANNELCLASS],
-                    self.getMasterArea(curArea),
-                    self,
-                )
+                if areaConfig[CONF_TILTTIME] == 0:
+                    newDevice = DynaliteTimeCoverDevice(
+                        curArea,
+                        areaConfig[CONF_NAME],
+                        areaConfig[CONF_NAME],
+                        areaConfig[CONF_DURATION],
+                        areaConfig[CONF_CHANNELCLASS],
+                        self.getMasterArea(curArea),
+                        self,
+                    )
+                else:
+                    newDevice = DynaliteTimeCoverWithTiltDevice(
+                        curArea,
+                        areaConfig[CONF_NAME],
+                        areaConfig[CONF_NAME],
+                        areaConfig[CONF_DURATION],
+                        areaConfig[CONF_CHANNELCLASS],
+                        areaConfig[CONF_TILTTIME],
+                        self.getMasterArea(curArea),
+                        self,
+                    )
                 self.added_time_covers[int(curArea)] = newDevice
                 self.setPresetIfReady(curArea, areaConfig[CONF_OPENPRESET], 1, newDevice)
                 self.setPresetIfReady(curArea, areaConfig[CONF_CLOSEPRESET], 2, newDevice)

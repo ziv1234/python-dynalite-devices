@@ -12,6 +12,7 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
     ):
         """Initialize the light."""
         self._level = 0
+        self._direction = "stop"
         super().__init__(
             area, area_name, channel, name, type, master_area, bridge, device
         )
@@ -32,6 +33,11 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
         return self._level
 
     @property
+    def direction(self):
+        """Return the brightness of this light between 0..1."""
+        return self._direction
+
+    @property
     def is_on(self):
         """Return true if device is on."""
         return self._level > 0
@@ -40,6 +46,13 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
         """Update the current level."""
         old_level = self._level
         self._level = actual_level
+        if target_level > actual_level:
+            self._direction = "open"
+        elif target_level < actual_level:
+            self._direction = "close"
+        else:
+            self._direction = "stop"
+        
         if self._level != old_level:
             self.update_listeners()
 
