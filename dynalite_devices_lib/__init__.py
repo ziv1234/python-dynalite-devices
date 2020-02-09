@@ -30,7 +30,9 @@ TEMPLATE_ROOM_SCHEMA = vol.Schema(
     {vol.Optional(CONF_ROOM_ON): numString, vol.Optional(CONF_ROOM_OFF): numString}
 )
 
-TEMPLATE_TRIGGER_SCHEMA = numString
+TEMPLATE_TRIGGER_SCHEMA = vol.Schema(
+    {vol.Optional(CONF_TRIGGER): numString}
+)
 
 TEMPLATE_CHANNELCOVER_SCHEMA = vol.Schema(
     {

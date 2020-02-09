@@ -288,18 +288,18 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         if position_diff > 0:
             await self.async_open_cover()
             while self._current_position < target_position and self._direction == "open":
-                LOGGER.debug("XXX position current=%s target=%s direction=%s", self._current_position, target_position, self._direction)
                 await asyncio.sleep(1)
-            LOGGER.debug("XXX last position current=%s target=%s direction=%s", self._current_position, target_position, self._direction)
             if self._direction == "open":
+                await self.async_stop_cover()
+                await asyncio.sleep(1) # doing twice for safety
                 await self.async_stop_cover()
         elif position_diff < 0:
             await self.async_close_cover()
             while self._current_position > target_position and self._direction == "close":
-                LOGGER.debug("XXX position current=%s target=%s direction=%s", self._current_position, target_position, self._direction)
                 await asyncio.sleep(1)
-            LOGGER.debug("XXX last position current=%s target=%s direction=%s", self._current_position, target_position, self._direction)
             if self._direction == "close":
+                await self.async_stop_cover()
+                await asyncio.sleep(1) # doing twice for safety
                 await self.async_stop_cover()
         else:
             await self.async_stop_cover()
@@ -310,32 +310,21 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         self.update_level(self._current_position, self._current_position)
         
     def listener(self, device, stop_fade):
-        LOGGER.debug("XXX listener device=%s", device.unique_id)
         if device == self.get_device(1):
-            LOGGER.debug("XXX listener open level=%s", device.level)
             if device.level > 0:
-                LOGGER.debug("XXX listener activate")
                 self.update_level(self._current_position, 1.0)
         elif device == self.get_device(2):
-            LOGGER.debug("XXX listener close level=%s", device.level)
             if device.level > 0:
-                LOGGER.debug("XXX listener activate")
                 self.update_level(self._current_position, 0.0)
         elif device == self.get_device(3):
-            LOGGER.debug("XXX listener stop level=%s", device.level)
             if device.level > 0:
-                LOGGER.debug("XXX listener activate")
                 self.update_level(self._current_position, self._current_position)
         elif device == self.get_device(4):
-            LOGGER.debug("XXX listener stop level=%s stop=%s", device.level, stop_fade)
             if stop_fade or device.direction == "stop":
-                LOGGER.debug("XXX listener channel stop")
                 self.update_level(self._current_position, self._current_position)
             elif device.direction == "open":
-                LOGGER.debug("XXX listener channel open")
                 self.update_level(self._current_position, 1.0)
             else:
-                LOGGER.debug("XXX listener channel close")
                 self.update_level(self._current_position, 0.0)
                 
         else:

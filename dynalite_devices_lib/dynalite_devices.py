@@ -1,6 +1,7 @@
 """Class to create devices from a Dynalite hub."""
 
 import copy
+import asyncio
 
 from .const import (
     LOGGER,
@@ -72,7 +73,7 @@ class BridgeError(Exception):
 class DynaliteDevices:
     """Manages a single Dynalite bridge."""
 
-    def __init__(self, config, loop, newDeviceFunc=None, updateDeviceFunc=None):
+    def __init__(self, config, loop=None, newDeviceFunc=None, updateDeviceFunc=None):
         """Initialize the system."""
         self.config = copy.deepcopy(config)
         self.loop = loop
@@ -92,6 +93,9 @@ class DynaliteDevices:
     async def async_setup(self, tries=0):
         """Set up a Dynalite bridge based on host parameter in the config."""
         LOGGER.debug("bridge async_setup - %s", self.config)
+
+        if not self.loop:
+            self.loop = asyncio.get_running_loop()
 
         # insert the templates
         if CONF_TEMPLATE not in self.config:
