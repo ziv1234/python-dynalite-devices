@@ -213,7 +213,7 @@ class DynaliteDevices:
                 self.added_room_switches[int(curArea)] = newDevice
                 self.setPresetIfReady(curArea, areaConfig[CONF_ROOM_ON], 1, newDevice)
                 self.setPresetIfReady(curArea, areaConfig[CONF_ROOM_OFF], 2, newDevice)
-                self.registerNewDevice("switch", newDevice)
+                self.registerNewDevice("switch", newDevice, False)
 
     def registerTimeCovers(self):
         """Register the time covers from three presets and a channel each."""
@@ -256,17 +256,18 @@ class DynaliteDevices:
                         self,
                     )
                     newDevice.set_device(4, dummyDevice)
-                self.registerNewDevice("cover", newDevice)
+                self.registerNewDevice("cover", newDevice, False)
 
-    def registerNewDevice(self, category, device):
+    def registerNewDevice(self, category, device, hidden):
         """Register a new device and group all the ones prior to CONFIGURED event together."""
         self.devices.append(device)
         # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
-        if self.configured:  
-            if self.newDeviceFunc:
-                self.newDeviceFunc([device])
-        else:  # send all the devices together when configured
-            self.waiting_devices.append(device)
+        if not hidden:
+            if self.configured:  
+                if self.newDeviceFunc:
+                    self.newDeviceFunc([device])
+            else:  # send all the devices together when configured
+                self.waiting_devices.append(device)
 
     @property
     def available(self):
@@ -389,10 +390,6 @@ class DynaliteDevices:
             self,
             curDevice,
         )
-        self.registerNewDevice("switch", newDevice)
-        if curArea not in self.added_presets:
-            self.added_presets[curArea] = {}
-        self.added_presets[curArea][curPreset] = newDevice
 
         try:
             hidden = areaConfig[CONF_PRESET][str(curPreset)][CONF_HIDDEN_ENTITY]
@@ -438,11 +435,12 @@ class DynaliteDevices:
         except KeyError:
             pass
 
-        if hidden:
-            newDevice.set_hidden(True)
+        self.registerNewDevice("switch", newDevice, hidden)
+        if curArea not in self.added_presets:
+            self.added_presets[curArea] = {}
+        self.added_presets[curArea][curPreset] = newDevice
         LOGGER.debug(
-            "Creating Dynalite preset area=%s preset=%s name=%s"
-            % (curArea, curPreset, curName)
+            "Creating Dynalite preset area=%s preset=%s name=%s hidden=%s", curArea, curPreset, curName, hidden
         )
 
     def handlePresetChange(self, event=None, dynalite=None):
@@ -496,6 +494,8 @@ class DynaliteDevices:
             else DEFAULT_CHANNEL_TYPE
         )
         hassArea = self.getMasterArea(curArea)
+        hidden = (channelConfig and CONF_HIDDEN_ENTITY in channelConfig and channelConfig[CONF_HIDDEN_ENTITY]) or \
+                 (self.config[CONF_AREA][str(curArea)].get(CONF_TEMPLATE) == CONF_HIDDEN_ENTITY)
         if channelType == "light":
             newDevice = DynaliteChannelLightDevice(
                 curArea,
@@ -507,7 +507,7 @@ class DynaliteDevices:
                 self,
                 curDevice,
             )
-            self.registerNewDevice("light", newDevice)
+            self.registerNewDevice("light", newDevice, hidden)
         elif channelType == "switch":
             newDevice = DynaliteChannelSwitchDevice(
                 curArea,
@@ -519,7 +519,7 @@ class DynaliteDevices:
                 self,
                 curDevice,
             )
-            self.registerNewDevice("switch", newDevice)
+            self.registerNewDevice("switch", newDevice, hidden)
         elif channelType == "cover":
             factor = (
                 channelConfig[CONF_FACTOR]
@@ -558,17 +558,13 @@ class DynaliteDevices:
                     self,
                     curDevice,
                 )
-            self.registerNewDevice("cover", newDevice)
+            self.registerNewDevice("cover", newDevice, hidden)
         else:
             LOGGER.info("unknown chnanel type %s - ignoring", channelType)
             return
         if curArea not in self.added_channels:
             self.added_channels[curArea] = {}
         self.added_channels[curArea][curChannel] = newDevice
-        if channelConfig and channelConfig[CONF_HIDDEN_ENTITY]:
-            newDevice.set_hidden(True)
-        if self.config[CONF_AREA][str(curArea)].get(CONF_TEMPLATE) == CONF_HIDDEN_ENTITY:
-            newDevice.set_hidden(True)
         LOGGER.debug("Creating Dynalite channel area=%s channel=%s name=%s", curArea, curChannel, curName)
         # if it is a channel from a timecover, register it
         try:

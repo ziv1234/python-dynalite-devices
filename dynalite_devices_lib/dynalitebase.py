@@ -13,7 +13,6 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
         self._name = name
         self._master_area = master_area
         self._bridge = bridge
-        self._hidden = False
         self._listeners = []
 
     @property
@@ -30,24 +29,6 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
     def available(self):
         """Return if device is available."""
         return self._bridge.available
-
-    @property
-    def hidden(self):
-        """Return true if this switch should be hidden from UI."""
-        return self._hidden
-
-    def set_hidden(self, hidden):
-        """Set device hidden property."""
-        self._hidden = hidden
-
-    @property
-    def device_info(self):
-        """Rerturn the device info."""
-        return {
-            "identifiers": {(DOMAIN, self.unique_id)},
-            "name": self.name,
-            "manufacturer": "Dynalite",
-        }
 
     @property
     def get_master_area(self):
