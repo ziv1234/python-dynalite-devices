@@ -138,7 +138,7 @@ class DynaliteDevices:
                         areaConfig[CONF_CHANNEL][str(curChannel)][conf] = template_params[conf]
                 elif template == CONF_TIME_COVER:
                     areaConfig[CONF_NODEFAULT] = True
-                    curChannel = template_params[CONF_CHANNEL]
+                    curChannel = template_params[CONF_CHANNEL_COVER]
                     if int(curChannel) > 0:
                         areaConfig[CONF_CHANNEL_COVER] = curChannel
                         self.ensureChannelInConfig(curArea, curChannel)
@@ -281,16 +281,24 @@ class DynaliteDevices:
 
     def getTemplateIndex(self, area, template, conf):
         """Get a specific index from a specific template in an area."""
-        # always defined either by the user or by the defaults
-        my_template = self.config[CONF_TEMPLATE][template]  
-        index = None
-        if conf in my_template:
-            index = my_template[conf]
+        # should always be defined either by the user or by the defaults
+        # first see if it is in the area
         try:
-            index = self.config[CONF_AREA][str(area)][CONF_TEMPLATE_OVERRIDE][conf]
+            return self.config[CONF_AREA][str(area)][conf]
         except KeyError:
             pass
-        return index
+        # next try templateoverride
+        try:
+            return self.config[CONF_AREA][str(area)][CONF_TEMPLATE_OVERRIDE][conf]
+        except KeyError:
+            pass
+        # next try the template in the config
+        # should always be defined either by the user or by the defaults
+        my_template = self.config[CONF_TEMPLATE][template]  
+        if conf in my_template:
+            return my_template[conf]
+        # not found
+        return None
 
     def getTemplateParams(self, area):
         """Extract all the parameters of a template."""
