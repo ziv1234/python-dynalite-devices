@@ -2,6 +2,7 @@
 
 import copy
 import asyncio
+import types
 
 from .const import (
     LOGGER,
@@ -33,6 +34,9 @@ from .const import (
 from dynalite_lib import (
     CONF_CHANNEL,
     CONF_AREA,
+    CONF_ACTIVE,
+    CONF_ACTIVE_ON,
+    CONF_ACTIVE_OFF,
     CONF_NAME,
     CONF_PRESET,
     CONF_NODEFAULT,
@@ -76,6 +80,13 @@ class DynaliteDevices:
     def __init__(self, config, loop=None, newDeviceFunc=None, updateDeviceFunc=None):
         """Initialize the system."""
         self.config = copy.deepcopy(config)
+        active_val = self.config[CONF_ACTIVE] if CONF_ACTIVE in self.config else CONF_ACTIVE_OFF
+        # fix in the case of boolean values
+        if active_val is True:
+            active_val = CONF_ACTIVE_ON
+        elif active_val is False:
+            active_val = CONF_ACTIVE_OFF
+        self.config[CONF_ACTIVE] = active_val
         self.loop = loop
         self.newDeviceFunc = newDeviceFunc
         self.updateDeviceFunc = updateDeviceFunc
@@ -378,7 +389,7 @@ class DynaliteDevices:
 
         try:
             # If the name is explicitly defined, use it
-            curName = areaConfig[CONF_PRESET][str(curPreset)][CONF_NAME]  
+            presetName = areaConfig[CONF_PRESET][str(curPreset)][CONF_NAME]  
         except KeyError:
             presetName = "Preset " + str(curPreset)
             if CONF_NODEFAULT not in areaConfig or not areaConfig[CONF_NODEFAULT]:
@@ -386,8 +397,7 @@ class DynaliteDevices:
                     presetName = self.config[CONF_PRESET][str(curPreset)][CONF_NAME]
                 except KeyError:
                     pass
-            # If not explicitly defined, use "areaname presetname"
-            curName = areaConfig[CONF_NAME] + " " + presetName  
+        curName = areaConfig[CONF_NAME] + " " + presetName  
         curDevice = self._dynalite.devices[CONF_AREA][curArea].preset[curPreset]
         newDevice = DynalitePresetSwitchDevice(
             curArea,
@@ -486,10 +496,11 @@ class DynaliteDevices:
 
         try:
             # If the name is explicitly defined, use it
-            curName = areaConfig[CONF_CHANNEL][str(curChannel)][CONF_NAME]  
+            channelName = areaConfig[CONF_CHANNEL][str(curChannel)][CONF_NAME]  
         except (KeyError, TypeError):
             # If not explicitly defined, use "areaname Channel X"
-            curName = areaConfig[CONF_NAME] + " Channel " + str(curChannel)
+            channelName = " Channel " + str(curChannel)
+        curName = areaConfig[CONF_NAME] + " " + channelName
         curDevice = self._dynalite.devices[CONF_AREA][curArea].channel[curChannel]
         try:
             channelConfig = areaConfig[CONF_CHANNEL][str(curChannel)]
@@ -636,14 +647,12 @@ class DynaliteDevices:
             pass
             
     def add_timer_listener(self, callback_func):
-        # LOGGER.debug("XXX add timer %s", callback_func)
         self.timer_callbacks.add(callback_func)
         if not self.timer_active:
             self.loop.call_later(1, self.timer_func)
             self.timer_active = True
             
     def remove_timer_listener(self, callback_func):
-        # LOGGER.debug("XXX remove timer %s", callback_func)
         self.timer_callbacks.discard(callback_func)
         
     def timer_func(self):
