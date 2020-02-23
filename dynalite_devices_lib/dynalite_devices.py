@@ -80,7 +80,7 @@ class DynaliteDevices:
         elif active_val is False:
             active_val = CONF_ACTIVE_OFF
         self.config[CONF_ACTIVE] = active_val
-        self.auto_discover = self.config[CONF_AUTO_DISCOVER]
+        self.auto_discover = self.config[CONF_AUTO_DISCOVER] if CONF_AUTO_DISCOVER in self.config else False
         self.loop = loop
         self.newDeviceFunc = newDeviceFunc
         self.updateDeviceFunc = updateDeviceFunc
