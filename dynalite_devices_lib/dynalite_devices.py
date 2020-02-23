@@ -2,18 +2,13 @@
 
 import copy
 import asyncio
-import types
 
 from .const import (
     LOGGER,
-    CONF_TEMPLATE_OVERRIDE,
     DEFAULT_COVER_CHANNEL_CLASS,
-    DEFAULT_COVER_FACTOR,
     CONF_TRIGGER,
-    CONF_FACTOR,
     CONF_CHANNEL_TYPE,
     CONF_HIDDEN_ENTITY,
-    CONF_TILT_PERCENTAGE,
     CONF_AREA_OVERRIDE,
     CONF_CHANNEL_CLASS,
     CONF_TEMPLATE,
@@ -30,8 +25,6 @@ from .const import (
     CONF_STOP_PRESET,
     CONF_DURATION,
     CONF_TILT_TIME,
-)
-from dynalite_lib import (
     CONF_CHANNEL,
     CONF_AREA,
     CONF_ACTIVE,
@@ -39,7 +32,7 @@ from dynalite_lib import (
     CONF_ACTIVE_OFF,
     CONF_NAME,
     CONF_PRESET,
-    CONF_NODEFAULT,
+    CONF_NO_DEFAULT,
     EVENT_NEWPRESET,
     EVENT_NEWCHANNEL,
     EVENT_PRESET,
@@ -53,9 +46,8 @@ from dynalite_lib import (
     CONF_TRGT_LEVEL,
     CONF_ACT_LEVEL,
     CONF_ALL,
-    Dynalite,
 )
-
+from .dynalite import Dynalite
 from .light import DynaliteChannelLightDevice
 from .switch import (
     DynaliteChannelSwitchDevice,
@@ -104,10 +96,38 @@ class DynaliteDevices:
     async def async_setup(self, tries=0):
         """Set up a Dynalite bridge based on host parameter in the config."""
         LOGGER.debug("bridge async_setup - %s", self.config)
-
         if not self.loop:
             self.loop = asyncio.get_running_loop()
+        await self.async_configure()
+        # Configure the dynalite object
+        self._dynalite = Dynalite(config=self.config, loop=self.loop)
+        eventHandler = self._dynalite.addListener(listenerFunction=self.handleEvent)
+        eventHandler.monitorEvent("*")
+        newPresetHandler = self._dynalite.addListener(
+            listenerFunction=self.handleNewPreset
+        )
+        newPresetHandler.monitorEvent(EVENT_NEWPRESET)
+        presetChangeHandler = self._dynalite.addListener(
+            listenerFunction=self.handlePresetChange
+        )
+        presetChangeHandler.monitorEvent(EVENT_PRESET)
+        newChannelHandler = self._dynalite.addListener(
+            listenerFunction=self.handleNewChannel
+        )
+        newChannelHandler.monitorEvent(EVENT_NEWCHANNEL)
+        channelChangeHandler = self._dynalite.addListener(
+            listenerFunction=self.handleChannelChange
+        )
+        channelChangeHandler.monitorEvent(EVENT_CHANNEL)
+        self._dynalite.start()
 
+        return True
+
+    async def async_configure(self, config=None):
+        """Configure a Dynalite bridge based on host parameter in the config."""
+        LOGGER.debug("bridge async_configure - %s", config)
+        if config:
+            self.config = copy.deepcopy(config)
         # insert the templates
         if CONF_TEMPLATE not in self.config:
             LOGGER.debug(CONF_TEMPLATE + " not in config - using defaults")
@@ -132,23 +152,23 @@ class DynaliteDevices:
                 template = self.config[CONF_AREA][curArea][CONF_TEMPLATE]
                 template_params = self.getTemplateParams(curArea)
                 if template == CONF_ROOM:
-                    areaConfig[CONF_NODEFAULT] = True
+                    areaConfig[CONF_NO_DEFAULT] = True
                     for conf in [CONF_ROOM_ON, CONF_ROOM_OFF]:
                         self.ensurePresetInConfig(curArea, template_params[conf])
                         areaConfig[conf] = template_params[conf]
                 elif template == CONF_TRIGGER:
-                    areaConfig[CONF_NODEFAULT] = True
+                    areaConfig[CONF_NO_DEFAULT] = True
                     self.ensurePresetInConfig(curArea, template_params[CONF_TRIGGER], False, areaConfig[CONF_NAME])
                     areaConfig[CONF_TRIGGER] = template_params[CONF_TRIGGER]
                 elif template == CONF_CHANNEL_COVER:
-                    areaConfig[CONF_NODEFAULT] = True
+                    areaConfig[CONF_NO_DEFAULT] = True
                     curChannel = template_params[CONF_CHANNEL]
                     self.ensureChannelInConfig(curArea, curChannel, False, areaConfig[CONF_NAME])
                     areaConfig[CONF_CHANNEL][str(curChannel)][CONF_CHANNEL_TYPE] = "cover"
                     for conf in [CONF_CHANNEL_CLASS, CONF_FACTOR, CONF_TILT_PERCENTAGE]:
                         areaConfig[CONF_CHANNEL][str(curChannel)][conf] = template_params[conf]
                 elif template == CONF_TIME_COVER:
-                    areaConfig[CONF_NODEFAULT] = True
+                    areaConfig[CONF_NO_DEFAULT] = True
                     curChannel = template_params[CONF_CHANNEL_COVER]
                     if int(curChannel) > 0:
                         areaConfig[CONF_CHANNEL_COVER] = curChannel
@@ -159,35 +179,10 @@ class DynaliteDevices:
                     for conf in [CONF_CHANNEL_CLASS, CONF_DURATION, CONF_TILT_TIME]:
                         areaConfig[conf] = template_params[conf]
         LOGGER.debug("bridge async_setup (after templates) - %s" % self.config)
-
-        # Configure the dynalite object
-        self._dynalite = Dynalite(config=self.config, loop=self.loop)
-        eventHandler = self._dynalite.addListener(listenerFunction=self.handleEvent)
-        eventHandler.monitorEvent("*")
-        newPresetHandler = self._dynalite.addListener(
-            listenerFunction=self.handleNewPreset
-        )
-        newPresetHandler.monitorEvent(EVENT_NEWPRESET)
-        presetChangeHandler = self._dynalite.addListener(
-            listenerFunction=self.handlePresetChange
-        )
-        presetChangeHandler.monitorEvent(EVENT_PRESET)
-        newChannelHandler = self._dynalite.addListener(
-            listenerFunction=self.handleNewChannel
-        )
-        newChannelHandler.monitorEvent(EVENT_NEWCHANNEL)
-        channelChangeHandler = self._dynalite.addListener(
-            listenerFunction=self.handleChannelChange
-        )
-        channelChangeHandler.monitorEvent(EVENT_CHANNEL)
-        self._dynalite.start()
-
         # register the rooms (switches on presets 1/4)
         self.registerRooms()
-
         # register the time covers
         self.registerTimeCovers()
-
         return True
 
     def ensurePresetInConfig(self, area, preset, hidden=True, name=None):
@@ -214,6 +209,8 @@ class DynaliteDevices:
         """Register the room switches from two normal presets each."""
         for curArea, areaConfig in self.config[CONF_AREA].items():
             if CONF_TEMPLATE in areaConfig and areaConfig[CONF_TEMPLATE] == CONF_ROOM:
+                if int(curArea) in self.added_room_switches:
+                    continue
                 newDevice = DynaliteDualPresetSwitchDevice(
                     curArea,
                     areaConfig[CONF_NAME],
@@ -230,6 +227,8 @@ class DynaliteDevices:
         """Register the time covers from three presets and a channel each."""
         for curArea, areaConfig in self.config[CONF_AREA].items():
             if CONF_TEMPLATE in areaConfig and areaConfig[CONF_TEMPLATE] == CONF_TIME_COVER:
+                if int(curArea) in self.added_time_covers:
+                    continue
                 if areaConfig[CONF_TILT_TIME] == 0:
                     newDevice = DynaliteTimeCoverDevice(
                         curArea,
@@ -292,22 +291,16 @@ class DynaliteDevices:
 
     def getTemplateIndex(self, area, template, conf):
         """Get a specific index from a specific template in an area."""
-        # should always be defined either by the user or by the defaults
-        # first see if it is in the area
+        # First check if explicitly defined in area
         try:
             return self.config[CONF_AREA][str(area)][conf]
         except KeyError:
             pass
-        # next try templateoverride
+        # get from templates - always defined either by the user or by the defaults
         try:
-            return self.config[CONF_AREA][str(area)][CONF_TEMPLATE_OVERRIDE][conf]
+            return self.config[CONF_TEMPLATE][template]
         except KeyError:
             pass
-        # next try the template in the config
-        # should always be defined either by the user or by the defaults
-        my_template = self.config[CONF_TEMPLATE][template]  
-        if conf in my_template:
-            return my_template[conf]
         # not found
         return None
 
@@ -382,6 +375,12 @@ class DynaliteDevices:
             return
         curPreset = event.data[CONF_PRESET]
 
+        try:
+            if self.added_presets[curArea][curPreset]:
+                return
+        except KeyError:
+            pass
+
         if str(curArea) not in self.config[CONF_AREA]:
             LOGGER.debug("adding area " + str(curArea) + " that is not in config")
             self.config[CONF_AREA][str(curArea)] = {CONF_NAME: "Area " + str(curArea)}
@@ -392,7 +391,7 @@ class DynaliteDevices:
             presetName = areaConfig[CONF_PRESET][str(curPreset)][CONF_NAME]  
         except KeyError:
             presetName = "Preset " + str(curPreset)
-            if CONF_NODEFAULT not in areaConfig or not areaConfig[CONF_NODEFAULT]:
+            if CONF_NO_DEFAULT not in areaConfig or not areaConfig[CONF_NO_DEFAULT]:
                 try:
                     presetName = self.config[CONF_PRESET][str(curPreset)][CONF_NAME]
                 except KeyError:
@@ -488,6 +487,12 @@ class DynaliteDevices:
         if CONF_CHANNEL not in event.data:
             return
         curChannel = event.data[CONF_CHANNEL]
+
+        try:
+            if self.added_channels[curArea][curChannel]:
+                return
+        except KeyError:
+            pass
 
         if str(curArea) not in self.config[CONF_AREA]:
             LOGGER.debug("adding area " + str(curArea) + " that is not in config")
