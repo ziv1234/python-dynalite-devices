@@ -7,15 +7,11 @@ from .const import ATTR_BRIGHTNESS
 class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Light."""
 
-    def __init__(
-        self, area, area_name, channel, name, type, master_area, bridge, device
-    ):
+    def __init__(self, area, channel, bridge):
         """Initialize the light."""
         self._level = 0
         self._direction = "stop"
-        super().__init__(
-            area, area_name, channel, name, type, master_area, bridge, device
-        )
+        super().__init__(area, channel, bridge)
 
     @property
     def category(self):
@@ -60,10 +56,10 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
         """Turn light on."""
         if ATTR_BRIGHTNESS in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS] / 255.0
-            self._device.turnOn(brightness=brightness)
         else:
-            self._device.turnOn()
+            brightness = 1.0
+        self._bridge.set_channel_level(self._area, self._channel, brightness)
 
     async def async_turn_off(self, **kwargs):
         """Turn light off."""
-        self._device.turnOff()
+        self._bridge.set_channel_level(self._area, self._channel, 0)

@@ -5,12 +5,11 @@ import json
 class DynetEvent(object):
     """Class to represent an event on the Dynet network."""
 
-    def __init__(self, eventType=None, message=None, data={}, direction=None):
+    def __init__(self, eventType=None, message=None, data={}):
         """Initialize the event."""
         self.eventType = eventType.upper() if eventType else None
         self.msg = message
         self.data = data
-        self.direction = direction
 
     def toJson(self):
         """Convert to JSON."""

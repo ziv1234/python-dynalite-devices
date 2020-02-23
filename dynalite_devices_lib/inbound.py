@@ -16,9 +16,6 @@ from .const import (
     CONF_PRESET,
     CONF_CHANNEL,
     CONF_JOIN,
-    CONF_STATE,
-    CONF_STATE_ON,
-    CONF_DIR_IN,
     CONF_ACTION,
     CONF_ACTION_REPORT,
     CONF_ACTION_CMD,
@@ -54,9 +51,7 @@ class DynetInbound(object):
                 CONF_PRESET: packet.preset,
                 CONF_FADE: packet.fade,
                 CONF_JOIN: packet.join,
-                CONF_STATE: CONF_STATE_ON,
             },
-            direction=CONF_DIR_IN,
         )
 
     def preset_1(self, packet):
@@ -91,15 +86,6 @@ class DynetInbound(object):
         """Handle preset 8 in banks of 8."""
         return self.preset(packet)
 
-    def request_preset(self, packet):
-        """Report that preset was requested."""
-        return DynetEvent(
-            eventType=EVENT_REQPRESET,
-            message=("Request Area %d preset" % (packet.area)),
-            data={CONF_AREA: packet.area, CONF_JOIN: packet.join},
-            direction=CONF_DIR_IN,
-        )
-
     def report_preset(self, packet):
         """Report the current preset of an area."""
         packet.preset = packet.data[0] + 1
@@ -110,9 +96,7 @@ class DynetInbound(object):
                 CONF_AREA: packet.area,
                 CONF_PRESET: packet.preset,
                 CONF_JOIN: packet.join,
-                CONF_STATE: CONF_STATE_ON,
             },
-            direction=CONF_DIR_IN,
         )
 
     def linear_preset(self, packet):
@@ -130,9 +114,7 @@ class DynetInbound(object):
                 CONF_PRESET: packet.preset,
                 CONF_FADE: packet.fade,
                 CONF_JOIN: packet.join,
-                CONF_STATE: CONF_STATE_ON,
             },
-            direction=CONF_DIR_IN,
         )
 
     def report_channel_level(self, packet):
@@ -153,9 +135,7 @@ class DynetInbound(object):
                 CONF_TRGT_LEVEL: target_level,
                 CONF_ACT_LEVEL: actual_level,
                 CONF_JOIN: packet.join,
-                CONF_STATE: CONF_STATE_ON,
             },
-            direction=CONF_DIR_IN,
         )
 
     def set_channel_x_to_level_with_fade(self, packet, channel_offset):
@@ -174,9 +154,7 @@ class DynetInbound(object):
                 CONF_ACTION: CONF_ACTION_CMD,
                 CONF_TRGT_LEVEL: target_level,
                 CONF_JOIN: packet.join,
-                CONF_STATE: CONF_STATE_ON,
             },
-            direction=CONF_DIR_IN,
         )
 
     def set_channel_1_to_level_with_fade(self, packet):
@@ -212,9 +190,7 @@ class DynetInbound(object):
                 CONF_CHANNEL: channel,
                 CONF_ACTION: CONF_ACTION_CMD,
                 CONF_JOIN: packet.join,
-                CONF_STATE: CONF_STATE_ON,
             },
-            direction=CONF_DIR_IN,
         )
 
     def fade_channel_area_to_preset(self, packet):
@@ -234,9 +210,7 @@ class DynetInbound(object):
                     CONF_PRESET: packet.preset,
                     CONF_FADE: packet.fade,
                     CONF_JOIN: packet.join,
-                    CONF_STATE: CONF_STATE_ON,
                 },
-                direction=CONF_DIR_IN,
             )
         else:
             return DynetEvent(
@@ -252,7 +226,5 @@ class DynetInbound(object):
                     CONF_ACTION: CONF_ACTION_CMD,
                     CONF_PRESET: packet.preset,
                     CONF_JOIN: packet.join,
-                    CONF_STATE: CONF_STATE_ON,
                 },
-                direction=CONF_DIR_IN,
             )

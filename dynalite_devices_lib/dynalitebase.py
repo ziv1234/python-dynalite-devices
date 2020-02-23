@@ -1,29 +1,21 @@
 """Support for the Dynalite devices."""
 
-from .const import DOMAIN
+from .const import DOMAIN, LOGGER
 
 
 class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the entity (light, switch, device, etc.)
     """Base class for Dynalite devices."""
 
-    def __init__(self, area, area_name, name, master_area, bridge):
+    def __init__(self, area, bridge):
         """Initialize the device."""
         self._area = area
-        self._area_name = area_name
-        self._name = name
-        self._master_area = master_area
         self._bridge = bridge
         self._listeners = []
 
     @property
-    def name(self):
-        """Return the name of the device."""
-        return self._name
-
-    @property
     def area_name(self):
         """Return the name of the area."""
-        return self._area_name
+        return self._bridge.get_area_name(self._area)
 
     @property
     def available(self):
@@ -33,7 +25,7 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
     @property
     def get_master_area(self):
         """Get the master area when combining entities from different Dynet areas to the same area."""
-        return self._master_area
+        return self._bridge.getMasterArea(self._area)
 
     def add_listener(self, listener):
         """Add a listener for changes."""
@@ -48,14 +40,16 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
 class DynaliteChannelBaseDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant device."""
 
-    def __init__(
-        self, area, area_name, channel, name, type, master_area, bridge, device
-    ):
+    def __init__(self, area, channel, bridge):
         """Initialize the device."""
+        LOGGER.error("XXX - area=%s, channel=%s", area, channel)
         self._channel = channel
-        self._type = type
-        self._device = device
-        super().__init__(area, area_name, name, master_area, bridge)
+        super().__init__(area, bridge)
+
+    @property
+    def name(self):
+        """Return the name of the device."""
+        return self._bridge.get_channel_name(self._area, self._channel)
 
     @property
     def unique_id(self):
@@ -69,11 +63,11 @@ class DynaliteChannelBaseDevice(DynaliteBaseDevice):
 class DynaliteMultiDevice(DynaliteBaseDevice):
     """Representation of two Dynalite Presets as an on/off switch."""
 
-    def __init__(self, num_devices, area, area_name, name, master_area, bridge):
+    def __init__(self, num_devices, area, bridge):
         """Initialize the device."""
-        super().__init__(area, area_name, name, master_area, bridge)
         self._devices = {}
         self._num_devices = num_devices
+        super().__init__(area, bridge)
 
     def get_device(self, devnum):
         """Get the first or second device."""
