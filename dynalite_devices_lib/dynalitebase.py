@@ -42,7 +42,6 @@ class DynaliteChannelBaseDevice(DynaliteBaseDevice):
 
     def __init__(self, area, channel, bridge):
         """Initialize the device."""
-        LOGGER.error("XXX - area=%s, channel=%s", area, channel)
         self._channel = channel
         super().__init__(area, bridge)
 

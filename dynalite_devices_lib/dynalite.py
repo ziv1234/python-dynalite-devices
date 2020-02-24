@@ -21,7 +21,7 @@ from .const import (
     CONF_LEVEL,
     CONF_PRESET,
     CONF_AUTO_DISCOVER,
-    CONF_POLLTIMER,
+    CONF_POLL_TIMER,
     CONF_CHANNEL,
     CONF_NO_DEFAULT,
     CONF_ACTION,
@@ -44,22 +44,10 @@ from .const import (
     CONF_ACTIVE,
     CONF_ACTIVE_ON,
     CONF_ACTIVE_INIT,
-    LOGGER
+    LOGGER,
+    DEFAULT_PORT,
+    CONF_ACTIVE_OFF,
 )
-
-
-class DynaliteConfig(object):
-    """Class for the configuration of the Dynalite network."""
-
-    def __init__(self, config=None):
-        """Initialize the configuration from Dict."""
-        self.host = config[CONF_HOST] if CONF_HOST in config else "localhost"
-        self.port = config[CONF_PORT] if CONF_PORT in config else 12345
-        self.default = config[CONF_DEFAULT] if CONF_DEFAULT in config else {}
-        self.active = config[CONF_ACTIVE] if CONF_ACTIVE in config else False
-        self.polltimer = (
-            config[CONF_POLLTIMER] if CONF_POLLTIMER in config else 1
-        )  # default poll 1 sec
 
 
 class Broadcaster(object):
@@ -108,99 +96,16 @@ class Broadcaster(object):
         """Call listener callback function."""
         self._listenerFunction(event=event, dynalite=dynalite)
 
-
-class RequestCounter:
-    """Helper class to ensure that requests to Dynet for current preset or current channel level get retried but there is only one of each running at each time."""
-
-    def __init__(self, loop):
-        """Initialize the class."""
-        self.loop = loop
-        self.counter = 0
-        self.timer = None
-
-    def update(self):
-        """Update that a new value arrive, so current requests can be cancelled."""
-        if self.timer:
-            self.timer.cancel()
-            self.timer = None
-        self.counter += 1
-
-    def timerCallback(self, counter, delay, func, *args):
-        """Send request if update was not yet received."""
-        self.timer = None
-        if self.counter > counter:  # already updated after the timer was scheduled
-            return
-        func(*args)
-        newDelay = min(delay * 2, MAXIMUM_RETRY_DELAY)
-        self.timer = self.loop.call_later(
-            delay, self.timerCallback, self.counter, newDelay, func, *args
-        )
-
-    def schedule(self, delay, immediate, func, *args):
-        """Schedule a request until an update arrives with an initial delay and either immediate or not."""
-        if delay == NO_RETRY_DELAY_VALUE:
-            func(*args)
-            return
-        if self.timer:
-            self.timer.cancel()
-        if immediate:
-            self.timerCallback(self.counter, delay, func, *args)
-        else:
-            newDelay = min(delay * 2, MAXIMUM_RETRY_DELAY)
-            self.timer = self.loop.call_later(
-                delay, self.timerCallback, self.counter, newDelay, func, *args
-            )
-
-
-    def requestPreset(self, delay=INITIAL_RETRY_DELAY, immediate=True):
-        """Request the preset for the area."""
-
-        def shouldRun():
-            """Return whether or not command is still relevant."""
-            return self.presetUpdateCounter.counter == currentCounter
-
-        currentCounter = self.presetUpdateCounter.counter
-        self.presetUpdateCounter.schedule(
-            delay,
-            immediate,
-            self._dynetControl.request_area_preset,
-            self.value,
-            shouldRun,
-        )
-
-    def requestChannelLevel(self, channel, delay=INITIAL_RETRY_DELAY, immediate=True):
-        """Request the level of a specific channel."""
-
-        def shouldRun():
-            """Return whether or not command is still relevant."""
-            return self.channelUpdateCounter[channel].counter == currentCounter
-
-        if channel not in self.channelUpdateCounter:
-            self.channelUpdateCounter[channel] = RequestCounter(self.loop)
-        currentCounter = self.channelUpdateCounter[channel].counter
-        self.channelUpdateCounter[channel].schedule(
-            delay,
-            immediate,
-            self._dynetControl.request_channel_level,
-            self.value,
-            channel,
-            shouldRun,
-        )
-
-    def requestAllChannelLevels(self, delay=INITIAL_RETRY_DELAY, immediate=True):
-        """Request channel levels for all channels in an area."""
-        if self.channel:
-            for channel in self.channel:
-                self.requestChannelLevel(channel, delay, immediate)
-
-
 class Dynalite(object):
     """Class to represent the interaction with Dynalite."""
 
-    def __init__(self, config=None, loop=None):
+    def __init__(self, port, host, active, poll_timer, loop=None):
         """Initialize the class."""
+        self.host = host
+        self.port = port
+        self.active = active
+        self.poll_timer = poll_timer
         self.loop = loop if loop else asyncio.get_event_loop()
-        self._config = DynaliteConfig(config=config)
         self._listeners = []
         self._dynet = None
         self.control = None
@@ -212,15 +117,15 @@ class Dynalite(object):
     async def _start(self):
         """Start the class."""
         self._dynet = Dynet(
-            host=self._config.host,
-            port=self._config.port,
-            active=self._config.active,
+            host=self.host,
+            port=self.port,
+            active=self.active,
             loop=self.loop,
             broadcaster=self.processTraffic,
             onConnect=self._connected,
             onDisconnect=self._disconnection,
         )
-        self.control = DynetControl(self._dynet, self.loop, self._config.active)
+        self.control = DynetControl(self._dynet, self.loop, self.active)
         self.connect()  
 
     def connect(self):

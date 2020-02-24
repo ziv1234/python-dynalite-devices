@@ -198,7 +198,6 @@ class DynetControl(object):
         fade_time = int(fade / 0.02)
         if (fade_time) > 0xFF:
             fade_time = 0xFF
-        LOGGER.error("XXX set_channel_level bank=%s level=%s, fade_time=%s", channel_bank, target_level, fade_time)
         packet.toMsg(
             sync=28,
             area=area,
@@ -290,7 +289,7 @@ class Dynet(object):
 
     async def async_connect(self):
         """Connect to Dynet."""
-        LOGGER.debug("Connecting to Dynet on %s:%d" % (self._host, self._port))
+        LOGGER.debug("Connecting to Dynet on %s:%s" % (self._host, self._port))
         try:
             await asyncio.wait_for(
                 self._loop.create_connection(
@@ -446,7 +445,6 @@ class Dynet(object):
             msg.append(packet.data[2])
             msg.append(packet.join)
             msg.append(packet.chk)
-            LOGGER.error("XXX - chk=%s", packet.chk)
             assert self.active in [CONF_ACTIVE_ON, CONF_ACTIVE_INIT] or packet.command not in [OpcodeType.REQUEST_CHANNEL_LEVEL.value, OpcodeType.REQUEST_PRESET.value]
             self._transport.write(msg)
             LOGGER.debug("Dynet Sent: %s" % msg)
