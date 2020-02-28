@@ -181,12 +181,12 @@ class Dynalite(object):
         self._listeners.append(broadcaster)
         return broadcaster
 
-    def set_channel_level(self, area, channel, level):
+    def set_channel_level(self, area, channel, level, fade):
         self.control.set_channel_level(
             area=int(area),
             channel=int(channel),
             level=level,
-            fade=0, # XXX add fade
+            fade=fade,
         )
         broadcastData = {
             CONF_AREA: int(area),
@@ -196,10 +196,9 @@ class Dynalite(object):
         }
         self.processTraffic(DynetEvent(eventType=EVENT_CHANNEL, data=broadcastData))
 
-    def select_preset(self, area, preset):
-        # XXX add fade
+    def select_preset(self, area, preset, fade):
         if not self.control:
             return
         self.control.areaPreset(
-            area=self.area.value, preset=self.value, fade=0
+            area=self.area.value, preset=self.value, fade=fade
         )
