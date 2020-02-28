@@ -67,6 +67,11 @@ class DynaliteMultiDevice(DynaliteBaseDevice):
         self._num_devices = num_devices
         super().__init__(area, bridge)
 
+    @property
+    def name(self):
+        """Return the name of the device."""
+        return self._bridge.get_multi_name(self._area)
+
     def get_device(self, devnum):
         """Get the first or second device."""
         return self._devices.get(devnum)

@@ -21,6 +21,7 @@ from .const import (
     CONF_CHANNEL_TYPE,
     CONF_CLOSE_PRESET,
     CONF_DEFAULT,
+    CONF_DEVICE_CLASS,
     CONF_DURATION,
     CONF_FADE,
     CONF_HIDDEN_ENTITY,
@@ -141,7 +142,7 @@ class DynaliteDevices:
                     conf, DEFAULT_TEMPLATES[template][conf]
                 )
         # create default presets
-        config_presets = config.get(CONF_DEFAULT, {})
+        config_presets = config.get(CONF_PRESET, {})
         default_presets = {}
         for preset in config_presets:
             cur_config = config_presets[preset]
@@ -157,6 +158,8 @@ class DynaliteDevices:
                 CONF_NAME: area_config.get(CONF_NAME, f"Area {area}"),
                 CONF_FADE: area_config.get(CONF_FADE, self.default_fade),
             }
+            if CONF_TEMPLATE in area_config:
+                self.area[area][CONF_TEMPLATE] = area_config[CONF_TEMPLATE]
             area_presets = {}
             area_channels = {}
             # User defined presets and channels first, then template presets, then defaults
@@ -243,13 +246,13 @@ class DynaliteDevices:
             if area_config.get(CONF_TEMPLATE, "") == CONF_ROOM:
                 if area in self.added_room_switches:
                     continue
-                new_device = DynaliteDualPresetSwitchDevice(area, self,)
+                new_device = DynaliteDualPresetSwitchDevice(area, self)
                 self.added_room_switches[area] = new_device
                 new_device.set_device(
-                    1, self.added_presets[area][area_config][CONF_ROOM_ON]
+                    1, self.added_presets[area][area_config[CONF_ROOM_ON]]
                 )
                 new_device.set_device(
-                    2, self.added_presets[area][area_config][CONF_ROOM_OFF]
+                    2, self.added_presets[area][area_config[CONF_ROOM_OFF]]
                 )
                 self.registerNewDevice("switch", new_device, False)
 
@@ -265,18 +268,16 @@ class DynaliteDevices:
                     new_device = DynaliteTimeCoverWithTiltDevice(area, self)
                 self.added_time_covers[area] = new_device
                 new_device.set_device(
-                    1, self.added_presets[area][area_config][CONF_OPEN_PRESET]
+                    1, self.added_presets[area][area_config[CONF_OPEN_PRESET]]
                 )
                 new_device.set_device(
-                    2, self.added_presets[area][area_config][CONF_CLOSE_PRESET]
+                    2, self.added_presets[area][area_config[CONF_CLOSE_PRESET]]
                 )
                 new_device.set_device(
-                    3, self.added_presets[area][area_config][CONF_STOP_PRESET]
+                    3, self.added_presets[area][area_config[CONF_STOP_PRESET]]
                 )
                 if area_config[CONF_CHANNEL_COVER] != 0:
-                    channel_device = self.added_channels[area][area_config][
-                        CONF_CHANNEL_COVER
-                    ]
+                    channel_device = self.added_channels[area][area_config[CONF_CHANNEL_COVER]]
                 else:
                     channel_device = DynaliteBaseDevice(area, self)
                 new_device.set_device(4, channel_device)
@@ -318,6 +319,18 @@ class DynaliteDevices:
     def get_channel_name(self, area, channel):
         return f"{self.area[area][CONF_NAME]} {self.area[area][CONF_CHANNEL][channel][CONF_NAME]}"
 
+    def get_channel_fade(self, area, channel):
+        return self.area[area][CONF_CHANNEL][channel][CONF_FADE]
+
+    def get_preset_name(self, area, preset):
+        return f"{self.area[area][CONF_NAME]} {self.area[area][CONF_PRESET][preset][CONF_NAME]}"
+
+    def get_preset_fade(self, area, preset):
+        return self.area[area][CONF_PRESET][preset][CONF_FADE]
+
+    def get_multi_name(self, area):
+        return self.area[area][CONF_NAME]
+
     def get_device_class(self, area):
         return self.area[area][CONF_DEVICE_CLASS]
 
@@ -342,19 +355,19 @@ class DynaliteDevices:
         # if no autodiscover and not in config, ignore
         if not self.auto_discover:
             if not self.area.get(area, {}).get(CONF_PRESET, {}).get(preset, False):
-                return
+                raise BridgeError(f"No auto discovery and unknown preset (area {area} preset {preset}")
             
         if area not in self.area:
             LOGGER.debug(f"adding area {area} that is not in config")
             self.area[area] = {CONF_NAME: f"Area {area}", CONF_FADE: self.default_fade}
-        areaConfig = self.area[area]
+        area_config = self.area[area]
 
         if CONF_PRESET not in area_config:
             area_config[CONF_PRESET] = {}
         if preset not in area_config[CONF_PRESET]:
             area_config[CONF_PRESET][preset] = {
                 CONF_NAME: f"Preset {preset}",
-                CONF_FADE: areaConfig[CONF_FADE],
+                CONF_FADE: area_config[CONF_FADE],
             }
             # if the area is a template is a template, new presets should be hidden
             if area_config.get(CONF_TEMPLATE, False):
@@ -366,11 +379,11 @@ class DynaliteDevices:
             preset,
             self,
         )
-        newDevice.set_level(0)
-        self.registerNewDevice("switch", newDevice, hidden)
+        new_device.set_level(0)
+        self.registerNewDevice("switch", new_device, hidden)
         if area not in self.added_presets:
             self.added_presets[area] = {}
-        self.added_presets[area][preset] = newDevice
+        self.added_presets[area][preset] = new_device
         LOGGER.debug(
             "Creating Dynalite preset area=%s preset=%s hidden=%s", area, preset, hidden
         )
@@ -380,7 +393,11 @@ class DynaliteDevices:
         LOGGER.debug("handle_preset_selection - event=%s", event.data)
         area = event.data[CONF_AREA]
         preset = event.data[CONF_PRESET]
-        self.create_preset_if_new(area, preset)
+        try:
+            self.create_preset_if_new(area, preset)
+        except BridgeError:
+            # Unknown and no autodiscover
+            return
 
         # Update all the preset devices
         for curPresetInArea in self.added_presets[int(area)]:
@@ -400,7 +417,7 @@ class DynaliteDevices:
         # if no autodiscover and not in config, ignore
         if not self.auto_discover:
             if not self.area.get(area, {}).get(CONF_CHANNEL, {}).get(channel, False):
-                return
+                raise BridgeError(f"No auto discovery and unknown channel (area {area} channel {channel}")
 
         if area not in self.area:
             LOGGER.debug(f"adding area {area} that is not in config")
@@ -451,7 +468,11 @@ class DynaliteDevices:
         LOGGER.debug("handle_channel_change called event = %s" % event.msg)
         area = event.data[CONF_AREA]
         channel = event.data[CONF_CHANNEL]
-        self.create_channel_if_new(area, channel)
+        try:
+            self.create_channel_if_new(area, channel)
+        except BridgeError:
+            # Unknown and no autodiscover
+            return
 
         action = event.data[CONF_ACTION]
         if action == CONF_ACTION_REPORT:

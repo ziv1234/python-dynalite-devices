@@ -58,8 +58,9 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
             brightness = kwargs[ATTR_BRIGHTNESS] / 255.0
         else:
             brightness = 1.0
-        self._bridge.set_channel_level(self._area, self._channel, brightness)
+        fade = self._bridge.get_channel_fade(self._area, self._channel)
+        self._bridge.set_channel_level(self._area, self._channel, brightness, fade)
 
     async def async_turn_off(self, **kwargs):
         """Turn light off."""
-        self._bridge.set_channel_level(self._area, self._channel, 0)
+        await self.async_turn_on(**{ATTR_BRIGHTNESS:0})

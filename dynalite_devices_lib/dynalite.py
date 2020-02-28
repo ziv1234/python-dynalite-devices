@@ -174,22 +174,26 @@ class Dynalite(object):
 
     def set_channel_level(self, area, channel, level, fade):
         self.control.set_channel_level(
-            area=int(area),
-            channel=int(channel),
+            area=area,
+            channel=channel,
             level=level,
             fade=fade,
         )
         broadcastData = {
-            CONF_AREA: int(area),
-            CONF_CHANNEL: int(channel),
-            CONF_TRGT_LEVEL: 255 - 254.0 * level,
+            CONF_AREA: area,
+            CONF_CHANNEL: channel,
+            CONF_TRGT_LEVEL: int(255 - 254.0 * level),
             CONF_ACTION: CONF_ACTION_CMD,
         }
         self.processTraffic(DynetEvent(eventType=EVENT_CHANNEL, data=broadcastData))
 
     def select_preset(self, area, preset, fade):
-        if not self.control:
-            return
-        self.control.areaPreset(
-            area=self.area.value, preset=self.value, fade=fade
+        self.control.set_area_preset(
+            area=area, preset=preset, fade=fade
         )
+        broadcastData = {
+            CONF_AREA: area,
+            CONF_PRESET: preset,
+        }
+        self.processTraffic(DynetEvent(eventType=EVENT_PRESET, data=broadcastData))
+        

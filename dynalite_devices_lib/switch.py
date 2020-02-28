@@ -48,6 +48,11 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
         super().__init__(area, bridge)
 
     @property
+    def name(self):
+        """Return the name of the device."""
+        return self._bridge.get_preset_name(self._area, self._preset)
+
+    @property
     def category(self):
         """Return the category of the entity: light, switch, or cover."""
         return "switch"
@@ -62,28 +67,23 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
         return self._level
 
     def set_level(self, level):
+        old_level = self._level
         self._level = level
+        if old_level != self._level:
+            self.update_listeners()
 
     @property
     def is_on(self):
         """Return true if device is on."""
-        old_level = self._level
-        self._level = self._device.active
-        if old_level != self._level:
-            self.update_listeners()
-        return self._level
-
-    def update_level(self, actual_level, target_level):
-        """Update the current level."""
-        self._level = actual_level
+        return self._level > 0
 
     async def async_turn_on(self, **kwargs):
         """Turn switch on."""
-        self._device.turnOn()
+        self._bridge.select_preset(self._area, self._preset)
 
     async def async_turn_off(self, **kwargs):
-        """Turn switch off."""
-        self._device.turnOff()
+        """Turn switch off - doesn't do anything for presets."""
+        self.set_level(0)
 
 
 class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
