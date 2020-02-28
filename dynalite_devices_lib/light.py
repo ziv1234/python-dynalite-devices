@@ -1,7 +1,7 @@
 """Support for Dynalite channels as lights."""
 
-from .dynalitebase import DynaliteChannelBaseDevice
 from .const import ATTR_BRIGHTNESS
+from .dynalitebase import DynaliteChannelBaseDevice
 
 
 class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
@@ -48,7 +48,7 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
             self._direction = "close"
         else:
             self._direction = "stop"
-        
+
         if self._level != old_level:
             self.update_listeners()
 

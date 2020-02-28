@@ -1,17 +1,16 @@
 """Support for the Dynalite channels as covers."""
-from .const import ATTR_POSITION, ATTR_TILT_POSITION, LOGGER
-
-from .dynalitebase import DynaliteChannelBaseDevice, DynaliteMultiDevice
 import asyncio
+
+from .const import ATTR_POSITION, ATTR_TILT_POSITION, LOGGER
+from .dynalitebase import DynaliteMultiDevice
+
 
 class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover."""
 
     def __init__(self, area, bridge):
         """Initialize the cover."""
-        self._device_class = device_class
         self._current_position = 0
-        self._duration = duration
         self._direction = "stop"
         super().__init__(4, area, bridge)
 
@@ -33,7 +32,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     @property
     def device_class(self):
         """Return the class of the cover."""
-        return self._device_class
+        return self._bridge.get_device_class(self._area)
 
     def update_level(self, actual_level, target_level):
         """Update the current level."""
@@ -44,7 +43,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
             self._direction = "open" if target_level > actual_level else "close"
             self._bridge.add_timer_listener(self.timer_callback)
         self._bridge.updateDevice(self)
-            
+
     def timer_callback(self):
         if self._direction == "open":
             self._current_position += 1.0 / self._duration
@@ -52,7 +51,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
                 self._current_position = 1.0
                 self._direction = "stop"
                 self._bridge.remove_timer_listener(self.timer_callback)
-        elif self._direction == "close":    
+        elif self._direction == "close":
             self._current_position -= 1.0 / self._duration
             if self._current_position <= 0.0:
                 self._current_position = 0.0
@@ -102,28 +101,32 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         position_diff = target_position - self._current_position
         if position_diff > 0:
             await self.async_open_cover()
-            while self._current_position < target_position and self._direction == "open":
+            while (
+                self._current_position < target_position and self._direction == "open"
+            ):
                 await asyncio.sleep(1)
             if self._direction == "open":
                 await self.async_stop_cover()
-                await asyncio.sleep(1) # doing twice for safety
+                await asyncio.sleep(1)  # doing twice for safety
                 await self.async_stop_cover()
         elif position_diff < 0:
             await self.async_close_cover()
-            while self._current_position > target_position and self._direction == "close":
+            while (
+                self._current_position > target_position and self._direction == "close"
+            ):
                 await asyncio.sleep(1)
             if self._direction == "close":
                 await self.async_stop_cover()
-                await asyncio.sleep(1) # doing twice for safety
+                await asyncio.sleep(1)  # doing twice for safety
                 await self.async_stop_cover()
         else:
             await self.async_stop_cover()
-        
+
     async def async_stop_cover(self, **kwargs):
         """Stop the cover."""
         await self.get_device(3).async_turn_on()
         self.update_level(self._current_position, self._current_position)
-        
+
     def listener(self, device, stop_fade):
         if device == self.get_device(1):
             if device.level > 0:
@@ -141,10 +144,11 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
                 self.update_level(self._current_position, 1.0)
             else:
                 self.update_level(self._current_position, 0.0)
-                
+
         else:
             LOGGER.error("listener received update from unknown device")
         super().listener(device, stop_fade)
+
 
 class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover that uses up and down for tilt."""
@@ -166,7 +170,9 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
         elif self._direction == "close":
             mult = -1
         else:
-            LOGGER.error("update_tilt called with invalid direction %s", self._direction)
+            LOGGER.error(
+                "update_tilt called with invalid direction %s", self._direction
+            )
             return
         tilt_diff = mult / self._tilt_duration
         self._current_tilt = max(0, min(1, self._current_tilt + tilt_diff))

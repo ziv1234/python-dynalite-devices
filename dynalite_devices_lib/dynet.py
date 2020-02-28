@@ -1,4 +1,6 @@
 """
+Library to handle Dynet networks.
+
 @ Author      : Troy Kelly
 @ Date        : 23 Sept 2018
 @ Description : Philips Dynalite Library - Unofficial interface for Philips Dynalite over RS485
@@ -9,9 +11,11 @@
 import asyncio
 import json
 import time
-from .const import CONF_ACTIVE_ON, CONF_ACTIVE_INIT, CONF_ACTIVE_OFF, LOGGER
-from .opcodes import OpcodeType, SyncType
+
+from .const import CONF_ACTIVE_INIT, CONF_ACTIVE_OFF, CONF_ACTIVE_ON, LOGGER
 from .inbound import DynetInbound
+from .opcodes import OpcodeType, SyncType
+
 
 class DynetError(Exception):
     """Class for Dynet errors."""
@@ -214,7 +218,7 @@ class DynetControl(object):
             sync=28,
             area=area,
             command=OpcodeType.REQUEST_CHANNEL_LEVEL.value,
-            data=[channel-1, 0, 0],
+            data=[channel - 1, 0, 0],
             join=255,
         )
         self._dynet.write(packet)
@@ -397,9 +401,7 @@ class Dynet(object):
 
     def async_disconnection(self, exc=None):
         """Handle a network disconnection from Dynet."""
-        LOGGER.debug(
-            "Disconnected from Dynet on %s:%d" % (self._host, self._port)
-        )
+        LOGGER.debug("Disconnected from Dynet on %s:%d" % (self._host, self._port))
         self._transport = None
         if self._onDisconnect is not None:
             self._loop.call_soon(self._onDisconnect(dynet=self))
@@ -445,7 +447,13 @@ class Dynet(object):
             msg.append(packet.data[2])
             msg.append(packet.join)
             msg.append(packet.chk)
-            assert self.active in [CONF_ACTIVE_ON, CONF_ACTIVE_INIT] or packet.command not in [OpcodeType.REQUEST_CHANNEL_LEVEL.value, OpcodeType.REQUEST_PRESET.value]
+            assert self.active in [
+                CONF_ACTIVE_ON,
+                CONF_ACTIVE_INIT,
+            ] or packet.command not in [
+                OpcodeType.REQUEST_CHANNEL_LEVEL.value,
+                OpcodeType.REQUEST_PRESET.value,
+            ]
             self._transport.write(msg)
             LOGGER.debug("Dynet Sent: %s" % msg)
             self._lastSent = int(round(time.time() * 1000))

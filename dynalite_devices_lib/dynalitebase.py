@@ -1,7 +1,5 @@
 """Support for the Dynalite devices."""
 
-from .const import DOMAIN, LOGGER
-
 
 class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the entity (light, switch, device, etc.)
     """Base class for Dynalite devices."""
@@ -58,6 +56,7 @@ class DynaliteChannelBaseDevice(DynaliteBaseDevice):
     def stop_fade(self):
         """Update the listeners if STOP FADE is received."""
         self.update_listeners(True)
+
 
 class DynaliteMultiDevice(DynaliteBaseDevice):
     """Representation of two Dynalite Presets as an on/off switch."""

@@ -8,46 +8,36 @@
 
 import asyncio
 import logging
-from .dynet import Dynet, DynetControl
-from .event import DynetEvent
 
 from .const import (
-    CONF_HOST,
-    CONF_PORT,
-    CONF_DEFAULT,
-    CONF_AREA,
-    CONF_NAME,
-    CONF_FADE,
-    CONF_LEVEL,
-    CONF_PRESET,
-    CONF_AUTO_DISCOVER,
-    CONF_POLL_TIMER,
-    CONF_CHANNEL,
-    CONF_NO_DEFAULT,
     CONF_ACTION,
-    CONF_ACTION_REPORT,
     CONF_ACTION_CMD,
+    CONF_AREA,
+    CONF_CHANNEL,
+    CONF_HOST,
+    CONF_LEVEL,
+    CONF_NAME,
+    CONF_NO_DEFAULT,
+    CONF_POLL_TIMER,
+    CONF_PORT,
+    CONF_PRESET,
     CONF_TRGT_LEVEL,
-    CONF_ACT_LEVEL,
-    CONF_ALL,
+    DEFAULT_PORT,
+    EVENT_CHANNEL,
+    EVENT_CONFIGURED,
     EVENT_CONNECTED,
     EVENT_DISCONNECTED,
-    EVENT_CONFIGURED,
-    EVENT_NEWPRESET,
     EVENT_NEWCHANNEL,
+    EVENT_NEWPRESET,
     EVENT_PRESET,
-    EVENT_CHANNEL,
-    STARTUP_RETRY_DELAY,
     INITIAL_RETRY_DELAY,
+    LOGGER,
     MAXIMUM_RETRY_DELAY,
     NO_RETRY_DELAY_VALUE,
-    CONF_ACTIVE,
-    CONF_ACTIVE_ON,
-    CONF_ACTIVE_INIT,
-    LOGGER,
-    DEFAULT_PORT,
-    CONF_ACTIVE_OFF,
+    STARTUP_RETRY_DELAY,
 )
+from .dynet import Dynet, DynetControl
+from .event import DynetEvent
 
 
 class Broadcaster(object):
@@ -96,6 +86,7 @@ class Broadcaster(object):
         """Call listener callback function."""
         self._listenerFunction(event=event, dynalite=dynalite)
 
+
 class Dynalite(object):
     """Class to represent the interaction with Dynalite."""
 
@@ -126,7 +117,7 @@ class Dynalite(object):
             onDisconnect=self._disconnection,
         )
         self.control = DynetControl(self._dynet, self.loop, self.active)
-        self.connect()  
+        self.connect()
 
     def connect(self):
         """Queue command to connect to Dynet."""
@@ -183,10 +174,7 @@ class Dynalite(object):
 
     def set_channel_level(self, area, channel, level):
         self.control.set_channel_level(
-            area=int(area),
-            channel=int(channel),
-            level=level,
-            fade=0, # XXX add fade
+            area=int(area), channel=int(channel), level=level, fade=0,  # XXX add fade
         )
         broadcastData = {
             CONF_AREA: int(area),
@@ -200,6 +188,4 @@ class Dynalite(object):
         # XXX add fade
         if not self.control:
             return
-        self.control.areaPreset(
-            area=self.area.value, preset=self.value, fade=0
-        )
+        self.control.areaPreset(area=self.area.value, preset=self.value, fade=0)

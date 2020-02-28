@@ -1,8 +1,8 @@
 """Support for the Dynalite channels and presets as switches."""
 
 from .dynalitebase import (
-    DynaliteChannelBaseDevice,
     DynaliteBaseDevice,
+    DynaliteChannelBaseDevice,
     DynaliteMultiDevice,
 )
 
@@ -13,7 +13,7 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
     def __init__(self, area, channel, bridge):
         """Initialize the switch."""
         self._level = 0
-        super().__init__(area, channel, bridgeW)
+        super().__init__(area, channel, bridge)
 
     @property
     def category(self):

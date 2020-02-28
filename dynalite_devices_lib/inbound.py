@@ -6,23 +6,23 @@
 @ Notes:        Requires a RS485 to IP gateway (Do not use the Dynalite one - use something cheaper)
 """
 
-from .event import DynetEvent
 from .const import (
-    EVENT_PRESET,
-    EVENT_CHANNEL,
-    EVENT_REQPRESET,
-    CONF_AREA,
-    CONF_FADE,
-    CONF_PRESET,
-    CONF_CHANNEL,
-    CONF_JOIN,
-    CONF_ACTION,
-    CONF_ACTION_REPORT,
-    CONF_ACTION_CMD,
-    CONF_TRGT_LEVEL,
     CONF_ACT_LEVEL,
+    CONF_ACTION,
+    CONF_ACTION_CMD,
+    CONF_ACTION_REPORT,
     CONF_ALL,
+    CONF_AREA,
+    CONF_CHANNEL,
+    CONF_FADE,
+    CONF_JOIN,
+    CONF_PRESET,
+    CONF_TRGT_LEVEL,
+    EVENT_CHANNEL,
+    EVENT_PRESET,
+    EVENT_REQPRESET,
 )
+from .event import DynetEvent
 
 
 class DynetInbound(object):

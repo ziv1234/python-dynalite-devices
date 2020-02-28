@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class SyncType(Enum):
     """Types of Sync Code."""
 
