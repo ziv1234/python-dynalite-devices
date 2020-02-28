@@ -400,7 +400,7 @@ class DynaliteDevices:
             return
 
         # Update all the preset devices
-        for curPresetInArea in self.added_presets[int(area)]:
+        for curPresetInArea in self.added_presets[area]:
             device = self.added_presets[area][curPresetInArea]
             if curPresetInArea == preset:
                 device.set_level(1)
