@@ -45,6 +45,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         self._bridge.updateDevice(self)
 
     def timer_callback(self):
+        """Update the progress of open and close."""
         if self._direction == "open":
             self._current_position += 1.0 / self._duration
             if self._current_position >= 1.0:
@@ -128,6 +129,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         self.update_level(self._current_position, self._current_position)
 
     def listener(self, device, stop_fade):
+        """Update according to updates in underlying devices."""
         if device == self.get_device(1):
             if device.level > 0:
                 self.update_level(self._current_position, 1.0)

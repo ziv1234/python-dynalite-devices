@@ -63,4 +63,4 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
 
     async def async_turn_off(self, **kwargs):
         """Turn light off."""
-        await self.async_turn_on(**{ATTR_BRIGHTNESS:0})
+        await self.async_turn_on(**{ATTR_BRIGHTNESS: 0})

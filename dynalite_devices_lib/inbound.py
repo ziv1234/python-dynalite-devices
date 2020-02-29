@@ -1,4 +1,6 @@
 """
+Class that handles inbound requests on the Dynet network and fires events.
+
 @ Author      : Troy Kelly
 @ Date        : 23 Sept 2018
 @ Description : Philips Dynalite Library - Unofficial interface for Philips Dynalite over RS485
@@ -20,7 +22,6 @@ from .const import (
     CONF_TRGT_LEVEL,
     EVENT_CHANNEL,
     EVENT_PRESET,
-    EVENT_REQPRESET,
 )
 from .event import DynetEvent
 

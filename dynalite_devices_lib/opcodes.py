@@ -1,3 +1,5 @@
+"""Class for the Dynet opcodes."""
+
 from enum import Enum
 
 

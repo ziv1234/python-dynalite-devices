@@ -64,9 +64,11 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
 
     @property
     def level(self):
+        """Return the current level."""
         return self._level
 
     def set_level(self, level):
+        """Set the current level and potentially trigger listeners."""
         old_level = self._level
         self._level = level
         if old_level != self._level:

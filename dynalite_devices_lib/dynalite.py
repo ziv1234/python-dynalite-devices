@@ -1,4 +1,6 @@
 """
+Manage a Dynalite connection.
+
 @ Author      : Troy Kelly
 @ Date        : 3 Dec 2018
 @ Description : Philips Dynalite Library - Unofficial interface for Philips Dynalite over RS485
@@ -7,34 +9,18 @@
 """
 
 import asyncio
-import logging
 
 from .const import (
     CONF_ACTION,
     CONF_ACTION_CMD,
     CONF_AREA,
     CONF_CHANNEL,
-    CONF_HOST,
-    CONF_LEVEL,
-    CONF_NAME,
-    CONF_NO_DEFAULT,
-    CONF_POLL_TIMER,
-    CONF_PORT,
     CONF_PRESET,
     CONF_TRGT_LEVEL,
-    DEFAULT_PORT,
     EVENT_CHANNEL,
-    EVENT_CONFIGURED,
     EVENT_CONNECTED,
     EVENT_DISCONNECTED,
-    EVENT_NEWCHANNEL,
-    EVENT_NEWPRESET,
     EVENT_PRESET,
-    INITIAL_RETRY_DELAY,
-    LOGGER,
-    MAXIMUM_RETRY_DELAY,
-    NO_RETRY_DELAY_VALUE,
-    STARTUP_RETRY_DELAY,
 )
 from .dynet import Dynet, DynetControl
 from .event import DynetEvent
@@ -45,24 +31,18 @@ class Broadcaster(object):
 
     def __init__(self, listenerFunction=None, loop=None):
         """Initialize the broadcaster."""
-        if listenerFunction is None:
-            raise BroadcasterError("A broadcaster bust have a listener Function")
         self._listenerFunction = listenerFunction
         self._monitoredEvents = []
         self._loop = loop
 
     def monitorEvent(self, eventType=None):
         """Set broadcaster to monitor an event or all."""
-        if eventType is None:
-            raise BroadcasterError("Must supply an event type to monitor")
         eventType = eventType.upper()
         if eventType not in self._monitoredEvents:
             self._monitoredEvents.append(eventType.upper())
 
     def unmonitorEvent(self, eventType=None):
         """Stop monitoring an event."""
-        if eventType is None:
-            raise BroadcasterError("Must supply an event type to un-monitor")
         eventType = eventType.upper()
         if eventType in self._monitoredEvents:
             self._monitoredEvents.remove(eventType.upper())
@@ -173,11 +153,9 @@ class Dynalite(object):
         return broadcaster
 
     def set_channel_level(self, area, channel, level, fade):
+        """Set the level of a channel."""
         self.control.set_channel_level(
-            area=area,
-            channel=channel,
-            level=level,
-            fade=fade,
+            area=area, channel=channel, level=level, fade=fade,
         )
         broadcastData = {
             CONF_AREA: area,
@@ -188,12 +166,10 @@ class Dynalite(object):
         self.processTraffic(DynetEvent(eventType=EVENT_CHANNEL, data=broadcastData))
 
     def select_preset(self, area, preset, fade):
-        self.control.set_area_preset(
-            area=area, preset=preset, fade=fade
-        )
+        """Select a preset in an area."""
+        self.control.set_area_preset(area=area, preset=preset, fade=fade)
         broadcastData = {
             CONF_AREA: area,
             CONF_PRESET: preset,
         }
         self.processTraffic(DynetEvent(eventType=EVENT_PRESET, data=broadcastData))
-        

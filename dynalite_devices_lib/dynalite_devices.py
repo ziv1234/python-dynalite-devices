@@ -277,7 +277,9 @@ class DynaliteDevices:
                     3, self.added_presets[area][area_config[CONF_STOP_PRESET]]
                 )
                 if area_config[CONF_CHANNEL_COVER] != 0:
-                    channel_device = self.added_channels[area][area_config[CONF_CHANNEL_COVER]]
+                    channel_device = self.added_channels[area][
+                        area_config[CONF_CHANNEL_COVER]
+                    ]
                 else:
                     channel_device = DynaliteBaseDevice(area, self)
                 new_device.set_device(4, channel_device)
@@ -317,21 +319,27 @@ class DynaliteDevices:
         return
 
     def get_channel_name(self, area, channel):
+        """Return the name of a channel."""
         return f"{self.area[area][CONF_NAME]} {self.area[area][CONF_CHANNEL][channel][CONF_NAME]}"
 
     def get_channel_fade(self, area, channel):
+        """Return the fade of a channel."""
         return self.area[area][CONF_CHANNEL][channel][CONF_FADE]
 
     def get_preset_name(self, area, preset):
+        """Return the name of a preset."""
         return f"{self.area[area][CONF_NAME]} {self.area[area][CONF_PRESET][preset][CONF_NAME]}"
 
     def get_preset_fade(self, area, preset):
+        """Return the fade of a preset."""
         return self.area[area][CONF_PRESET][preset][CONF_FADE]
 
     def get_multi_name(self, area):
+        """Return the name of a multi-device."""
         return self.area[area][CONF_NAME]
 
     def get_device_class(self, area):
+        """Return the class for a blind."""
         return self.area[area][CONF_DEVICE_CLASS]
 
     def getMasterArea(self, area):
@@ -355,8 +363,10 @@ class DynaliteDevices:
         # if no autodiscover and not in config, ignore
         if not self.auto_discover:
             if not self.area.get(area, {}).get(CONF_PRESET, {}).get(preset, False):
-                raise BridgeError(f"No auto discovery and unknown preset (area {area} preset {preset}")
-            
+                raise BridgeError(
+                    f"No auto discovery and unknown preset (area {area} preset {preset}"
+                )
+
         if area not in self.area:
             LOGGER.debug(f"adding area {area} that is not in config")
             self.area[area] = {CONF_NAME: f"Area {area}", CONF_FADE: self.default_fade}
@@ -372,13 +382,9 @@ class DynaliteDevices:
             # if the area is a template is a template, new presets should be hidden
             if area_config.get(CONF_TEMPLATE, False):
                 area_config[CONF_PRESET][preset][CONF_HIDDEN_ENTITY] = True
-        
+
         hidden = area_config[CONF_PRESET][preset].get(CONF_HIDDEN_ENTITY, False)
-        new_device = DynalitePresetSwitchDevice(
-            area,
-            preset,
-            self,
-        )
+        new_device = DynalitePresetSwitchDevice(area, preset, self,)
         new_device.set_level(0)
         self.registerNewDevice("switch", new_device, hidden)
         if area not in self.added_presets:
@@ -417,11 +423,13 @@ class DynaliteDevices:
         # if no autodiscover and not in config, ignore
         if not self.auto_discover:
             if not self.area.get(area, {}).get(CONF_CHANNEL, {}).get(channel, False):
-                raise BridgeError(f"No auto discovery and unknown channel (area {area} channel {channel}")
+                raise BridgeError(
+                    f"No auto discovery and unknown channel (area {area} channel {channel}"
+                )
 
         if area not in self.area:
             LOGGER.debug(f"adding area {area} that is not in config")
-            self.area[area] = {CONF_NAME: F"Area {area}", CONF_FADE: self.default_fade}
+            self.area[area] = {CONF_NAME: f"Area {area}", CONF_FADE: self.default_fade}
         area_config = self.area[area]
 
         if CONF_CHANNEL not in area_config:
@@ -437,22 +445,16 @@ class DynaliteDevices:
 
         channel_config = area_config[CONF_CHANNEL][channel]
         LOGGER.debug("create_channel_if_new - channel_config=%s" % channel_config)
-        channel_type = channel_config.get(CONF_CHANNEL_TYPE, DEFAULT_CHANNEL_TYPE).lower()
+        channel_type = channel_config.get(
+            CONF_CHANNEL_TYPE, DEFAULT_CHANNEL_TYPE
+        ).lower()
         hidden = channel_config.get(CONF_HIDDEN_ENTITY, False)
 
         if channel_type == "light":
-            new_device = DynaliteChannelLightDevice(
-                area,
-                channel,
-                self,
-            )
+            new_device = DynaliteChannelLightDevice(area, channel, self,)
             self.registerNewDevice("light", new_device, hidden)
         elif channel_type == "switch":
-            new_device = DynaliteChannelSwitchDevice(
-                area,
-                channel,
-                self,
-            )
+            new_device = DynaliteChannelSwitchDevice(area, channel, self,)
             self.registerNewDevice("switch", new_device, hidden)
         else:
             LOGGER.info("unknown chnanel type %s - ignoring", channel_type)
@@ -509,15 +511,18 @@ class DynaliteDevices:
             pass
 
     def add_timer_listener(self, callback_func):
+        """Add a listener to the timer and start if needed."""
         self.timer_callbacks.add(callback_func)
         if not self.timer_active:
             self.loop.call_later(1, self.timer_func)
             self.timer_active = True
 
     def remove_timer_listener(self, callback_func):
+        """Remove a listener from a timer."""
         self.timer_callbacks.discard(callback_func)
 
     def timer_func(self):
+        """Call callbacks and either schedule timer or stop."""
         if self.timer_callbacks:
             for callback in self.timer_callbacks:
                 self.loop.call_soon(callback)
@@ -526,10 +531,11 @@ class DynaliteDevices:
             self.timer_active = False
 
     def set_channel_level(self, area, channel, level, fade):
+        """Set the level for a channel."""
         fade = self.area[area][CONF_CHANNEL][channel][CONF_FADE]
         self._dynalite.set_channel_level(area, channel, level, fade)
-        
+
     def select_preset(self, area, preset):
+        """Select a preset in an area."""
         fade = self.area[area][CONF_PRESET][preset][CONF_FADE]
         self._dynalite.select_preset(area, preset, fade)
-        
