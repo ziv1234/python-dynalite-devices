@@ -46,6 +46,7 @@ class Dynalite(object):
         self._sending = False
         self._reader = None
         self._writer = None
+        self.resetting = False
 
     async def connect_internal(self):
         """Create the actual connection to Dynet."""
@@ -65,8 +66,9 @@ class Dynalite(object):
         LOGGER.debug("Connecting to Dynet on %s:%s", host, port)
         if not self.loop:
             self.loop = asyncio.get_running_loop()
+        self.resetting = False
         result = await self.connect_internal()
-        if result:
+        if result and not self.resetting:
             self.loop.create_task(self.reader_loop())
         return result
 
@@ -82,11 +84,17 @@ class Dynalite(object):
             except ConnectionResetError:
                 pass
             # we got disconnected or EOF
+            if self.resetting:
+                self._reader = None
+                return  # stop loop
             self._reader = None
             self._writer = None
             self.broadcast(DynetEvent(eventType=EVENT_DISCONNECTED, data={}))
             await asyncio.sleep(1)  # Don't overload the network
             while not await self.connect_internal():
+                if self.resetting:
+                    self._reader = None
+                    return  # stop loop
                 await asyncio.sleep(1)  # Don't overload the network
             self.broadcast(DynetEvent(eventType=EVENT_CONNECTED, data={}))
 
@@ -227,3 +235,15 @@ class Dynalite(object):
         del self._outBuffer[0]
         if len(self._outBuffer) > 0:
             self.loop.call_later(self._messageDelay / 1000, self.write)
+
+    async def async_reset(self):
+        """Close sockets and timers."""
+        self.resetting = True
+        # Wait for reader to also close
+        while self._reader:
+            if self._writer:
+                temp_writer = self._writer
+                self._writer = None
+                temp_writer.close()
+                await temp_writer.wait_closed()
+            await asyncio.sleep(1)

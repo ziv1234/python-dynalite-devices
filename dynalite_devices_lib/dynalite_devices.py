@@ -93,7 +93,8 @@ class DynaliteDevices:
         self.timer_callbacks = set()
         self.template = {}
         self.area = {}
-        self._dynalite = Dynalite(broadcast_func=self.handleEvent,)
+        self._dynalite = Dynalite(broadcast_func=self.handleEvent)
+        self.resetting = False
 
     async def async_setup(self):
         """Set up a Dynalite bridge based on host parameter in the config."""
@@ -101,6 +102,7 @@ class DynaliteDevices:
         if not self.loop:
             self.loop = asyncio.get_running_loop()
         # Run the dynalite object. Assumes self.configure() has been called
+        self.resetting = False
         self.connected = await self._dynalite.connect(self.host, self.port)
         return self.connected
 
@@ -481,7 +483,7 @@ class DynaliteDevices:
 
     def timer_func(self):
         """Call callbacks and either schedule timer or stop."""
-        if self.timer_callbacks:
+        if self.timer_callbacks and not self.resetting:
             for callback in self.timer_callbacks:
                 self.loop.call_soon(callback)
             self.loop.call_later(1, self.timer_func)
@@ -533,3 +535,10 @@ class DynaliteDevices:
             override_area = area_config[CONF_AREA_OVERRIDE]
             master_area = override_area if override_area.lower() != CONF_NONE else ""
         return master_area
+
+    async def async_reset(self):
+        """Reset the connections and timers."""
+        self.resetting = True
+        await self._dynalite.async_reset()
+        while self.timer_active:
+            await asyncio.sleep(1)
