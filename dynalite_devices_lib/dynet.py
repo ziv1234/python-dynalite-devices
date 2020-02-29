@@ -8,19 +8,9 @@ Library to handle Dynet networks.
 @ Notes:        Requires a RS485 to IP gateway (Do not use the Dynalite one - use something cheaper)
 """
 
-import asyncio
 import json
 
-from .const import LOGGER
 from .opcodes import OpcodeType, SyncType
-
-
-class DynetError(Exception):
-    """Class for Dynet errors."""
-
-    def __init__(self, message):
-        """Initialize the error."""
-        self.message = message
 
 
 class PacketError(Exception):
@@ -158,75 +148,3 @@ class DynetPacket(object):
             join=255,
         )
         return packet
-
-
-class DynetConnection(asyncio.Protocol):
-    """Class for an asyncio protocol for the connection to Dynet."""
-
-    def __init__(
-        self,
-        connectionMade=None,
-        connectionLost=None,
-        receiveHandler=None,
-        connectionPause=None,
-        connectionResume=None,
-        loop=None,
-    ):
-        """Initialize the connection."""
-        self._transport = None
-        self._paused = False
-        self._loop = loop
-        self.connectionMade = connectionMade
-        self.connectionLost = connectionLost
-        self.receiveHandler = receiveHandler
-        self.connectionPause = connectionPause
-        self.connectionResume = connectionResume
-
-    def connection_made(self, transport):
-        """Call when connection is made."""
-        self._transport = transport
-        self._paused = False
-        if self.connectionMade is not None:
-            if self._loop is None:
-                self.connectionMade(transport)
-            else:
-                self._loop.call_soon(self.connectionMade, transport)
-
-    def connection_lost(self, exc=None):
-        """Call when connection is lost."""
-        self._transport = None
-        if self.connectionLost is not None:
-            if self._loop is None:
-                self.connectionLost(exc)
-            else:
-                self._loop.call_soon(self.connectionLost, exc)
-
-    def pause_writing(self):
-        """Call when connection is paused."""
-        self._paused = True
-        if self.connectionPause is not None:
-            if self._loop is None:
-                self.connectionPause()
-            else:
-                self._loop.call_soon(self.connectionPause)
-
-    def resume_writing(self):
-        """Call when connection is resumed."""
-        self._paused = False
-        if self.connectionResume is not None:
-            if self._loop is None:
-                self.connectionResume()
-            else:
-                self._loop.call_soon(self.connectionResume)
-
-    def data_received(self, data):
-        """Call when data is received."""
-        if self.receiveHandler is not None:
-            if self._loop is None:
-                self.receiveHandler(data)
-            else:
-                self._loop.call_soon(self.receiveHandler, data)
-
-    def eof_received(self):
-        """Call when EOF for connection."""
-        LOGGER.debug("EOF Received")
