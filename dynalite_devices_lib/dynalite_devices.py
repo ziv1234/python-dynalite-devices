@@ -101,8 +101,8 @@ class DynaliteDevices:
         if not self.loop:
             self.loop = asyncio.get_running_loop()
         # Run the dynalite object. Assumes self.configure() has been called
-        self.loop.create_task(self._dynalite.connect(self.host, self.port))
-        return True
+        self.connected = await self._dynalite.connect(self.host, self.port)
+        return self.connected
 
     def configure(self, config):
         """Configure a Dynalite bridge based on host parameter in the config."""
@@ -338,10 +338,8 @@ class DynaliteDevices:
                 raise BridgeError(
                     f"No auto discovery and unknown preset (area {area} preset {preset}"
                 )
-
         self.ensure_area(area)
         area_config = self.area[area]
-
         if CONF_PRESET not in area_config:
             area_config[CONF_PRESET] = {}
         if preset not in area_config[CONF_PRESET]:
@@ -352,7 +350,6 @@ class DynaliteDevices:
             # if the area is a template is a template, new presets should be hidden
             if area_config.get(CONF_TEMPLATE, False):
                 area_config[CONF_PRESET][preset][CONF_HIDDEN_ENTITY] = True
-
         hidden = area_config[CONF_PRESET][preset].get(CONF_HIDDEN_ENTITY, False)
         new_device = DynalitePresetSwitchDevice(area, preset, self,)
         new_device.set_level(0)
@@ -374,7 +371,6 @@ class DynaliteDevices:
         except BridgeError:
             # Unknown and no autodiscover
             return
-
         # Update all the preset devices
         for curPresetInArea in self.added_presets[area]:
             device = self.added_presets[area][curPresetInArea]
@@ -383,6 +379,11 @@ class DynaliteDevices:
             else:
                 device.set_level(0)
             self.updateDevice(device)
+        # If active is set to full, query all channels in the area
+        if self.active == CONF_ACTIVE_ON:
+            for channel in self.area[area].get(CONF_CHANNEL, {}):
+                LOGGER.debug("XXX - querying area %s channel %s", area, channel)
+                self._dynalite.request_channel_level(area, channel)
 
     def create_channel_if_new(self, area, channel):
         """Register a new channel."""
@@ -398,10 +399,8 @@ class DynaliteDevices:
                 raise BridgeError(
                     f"No auto discovery and unknown channel (area {area} channel {channel}"
                 )
-
         self.ensure_area(area)
         area_config = self.area[area]
-
         if CONF_CHANNEL not in area_config:
             area_config[CONF_CHANNEL] = {}
         if channel not in area_config[CONF_CHANNEL]:
@@ -412,14 +411,12 @@ class DynaliteDevices:
             # if the area is a template is a template, new channels should be hidden
             if area_config.get(CONF_TEMPLATE, False):
                 area_config[CONF_CHANNEL][channel][CONF_HIDDEN_ENTITY] = True
-
         channel_config = area_config[CONF_CHANNEL][channel]
         LOGGER.debug("create_channel_if_new - channel_config=%s", channel_config)
         channel_type = channel_config.get(
             CONF_CHANNEL_TYPE, DEFAULT_CHANNEL_TYPE
         ).lower()
         hidden = channel_config.get(CONF_HIDDEN_ENTITY, False)
-
         if channel_type == "light":
             new_device = DynaliteChannelLightDevice(area, channel, self,)
             self.registerNewDevice("light", new_device, hidden)
@@ -445,7 +442,6 @@ class DynaliteDevices:
         except BridgeError:
             # Unknown and no autodiscover
             return
-
         action = event.data[CONF_ACTION]
         if action == CONF_ACTION_REPORT:
             actual_level = (255 - event.data[CONF_ACT_LEVEL]) / 254

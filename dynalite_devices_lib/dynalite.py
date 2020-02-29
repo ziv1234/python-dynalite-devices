@@ -24,7 +24,7 @@ from .const import (
     EVENT_PRESET,
     LOGGER,
 )
-from .dynet import DynetConnection, DynetError, DynetPacket, PacketError
+from .dynet import DynetPacket, PacketError
 from .event import DynetEvent
 from .inbound import DynetInbound
 from .opcodes import SyncType
@@ -39,68 +39,57 @@ class Dynalite(object):
         self.port = None
         self.loop = None
         self.broadcast_func = broadcast_func
-        self._transport = None
-        self._connection_retry_timer = 1
-        self._paused = False
         self._inBuffer = []
         self._outBuffer = []
-        self._timeout = 30
         self._lastSent = None
         self._messageDelay = 200
         self._sending = False
+        self._reader = None
+        self._writer = None
+
+    async def connect_internal(self):
+        """Create the actual connection to Dynet."""
+        try:
+            self._reader, self._writer = await asyncio.open_connection(
+                self.host, self.port
+            )
+            return True
+        except (ValueError, OSError, asyncio.TimeoutError) as err:
+            LOGGER.warning("Could not connect to Dynet (%s)", err)
+            return False
 
     async def connect(self, host, port):
         """Connect to Dynet."""
         self.host = host
         self.port = port
-        LOGGER.debug("Connecting to Dynet on %s:%s" % (self.host, self.port))
+        LOGGER.debug("Connecting to Dynet on %s:%s", host, port)
         if not self.loop:
             self.loop = asyncio.get_running_loop()
-        try:
-            await asyncio.wait_for(
-                self.loop.create_connection(
-                    lambda: DynetConnection(
-                        connectionMade=self._connected,
-                        connectionLost=self._disconnected,
-                        receiveHandler=self.receive,
-                        connectionPause=self.pause,
-                        connectionResume=self.resume,
-                        loop=self.loop,
-                    ),
-                    host=self.host,
-                    port=self.port,
-                ),
-                timeout=self._timeout,
-            )
-        except (ValueError, OSError, asyncio.TimeoutError) as err:
-            LOGGER.warning(
-                "Could not connect to Dynet (%s). Retrying in %d seconds",
-                err,
-                self._connection_retry_timer,
-            )
-            self.loop.call_later(self._connection_retry_timer, self.connect)
-            self._connection_retry_timer = (
-                2 * self._connection_retry_timer
-                if self._connection_retry_timer < 32
-                else 60
-            )
+        result = await self.connect_internal()
+        if result:
+            self.loop.create_task(self.reader_loop())
+        return result
 
-    def _connected(self, transport=None):
-        """Handle a successful connection."""
-        self._transport = transport
-        if transport is not None:
-            self.loop.call_soon(self.write)  # write whatever is queued in the buffer
-        else:
-            raise DynetError("Connected but no transport channel provided")
-        self.broadcast(DynetEvent(eventType=EVENT_CONNECTED, data={}))
-
-    def _disconnected(self, exc=None):
-        """Handle a disconnection and try to reconnect."""
-        self._transport = None
-        if exc is not None:
-            LOGGER.warning(exc)
-        self.broadcast(DynetEvent(eventType=EVENT_DISCONNECTED, data={}))
-        self.loop.call_later(1, self.connect)  # Don't overload the network
+    async def reader_loop(self):
+        """Loop to read from the stream reader and reconnect if necessary."""
+        while True:
+            self.write()  # write if there is something in the buffers
+            try:
+                data = await self._reader.read(100)
+                LOGGER.debug("XXXX read %s bytes", len(data))
+                if len(data) > 0:
+                    self.receive(data)
+                    continue
+            except ConnectionResetError:
+                pass
+            # we got disconnected or EOF
+            self._reader = None
+            self._writer = None
+            self.broadcast(DynetEvent(eventType=EVENT_DISCONNECTED, data={}))
+            await asyncio.sleep(1)  # Don't overload the network
+            while not await self.connect_internal():
+                await asyncio.sleep(1)  # Don't overload the network
+            self.broadcast(DynetEvent(eventType=EVENT_CONNECTED, data={}))
 
     def broadcast(self, event):
         """Broadcast an event to all listeners - queue."""
@@ -142,18 +131,6 @@ class Dynalite(object):
         """Request current preset of an area."""
         packet = DynetPacket.request_area_preset_packet(area)
         self.write(packet)
-
-    def pause(self):
-        """Pause transmission on Dynet."""
-        LOGGER.debug("Pausing Dynet on %s:%d" % (self.host, self.port))
-        # Need to schedule a resend here
-        self._paused = True
-
-    def resume(self):
-        """Resume transmission on Dynet."""
-        LOGGER.debug("Resuming Dynet on %s:%d" % (self.host, self.port))
-        # Need to schedule a resend here
-        self._paused = False
 
     def receive(self, data=None):
         """Handle data that was received."""
@@ -216,10 +193,10 @@ class Dynalite(object):
         """Write a packet or trigger write loop."""
         if newPacket is not None:
             self._outBuffer.append(newPacket)
-        if self._transport is None:
-            LOGGER.debug("_write before transport is ready. queuing")
+        if self._writer is None:
+            LOGGER.debug("write before transport is ready. queuing")
             return
-        if self._paused or self._sending:
+        if self._sending:
             LOGGER.debug("Connection busy - queuing packet")
             self.loop.call_later(1, self.write)
             return
@@ -244,7 +221,7 @@ class Dynalite(object):
         msg.append(packet.data[2])
         msg.append(packet.join)
         msg.append(packet.chk)
-        self._transport.write(msg)
+        self._writer.write(msg)
         LOGGER.debug("Dynet Sent: %s" % msg)
         self._lastSent = int(round(time.time() * 1000))
         self._sending = False
