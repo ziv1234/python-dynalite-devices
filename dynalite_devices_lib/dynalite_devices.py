@@ -7,6 +7,7 @@ from .const import (
     CONF_ACTION,
     CONF_ACTION_CMD,
     CONF_ACTION_REPORT,
+    CONF_ACTION_STOP,
     CONF_ACTIVE,
     CONF_ACTIVE_INIT,
     CONF_ACTIVE_OFF,
@@ -92,7 +93,7 @@ class DynaliteDevices:
         self.timer_callbacks = set()
         self.template = {}
         self.area = {}
-        self._dynalite = None
+        self._dynalite = Dynalite(broadcast_func=self.handleEvent,)
 
     async def async_setup(self):
         """Set up a Dynalite bridge based on host parameter in the config."""
@@ -100,15 +101,7 @@ class DynaliteDevices:
         if not self.loop:
             self.loop = asyncio.get_running_loop()
         # Run the dynalite object. Assumes self.configure() has been called
-        self._dynalite = Dynalite(
-            host=self.host,
-            port=self.port,
-            active=self.active,
-            poll_timer=self.poll_timer,
-            broadcast_func=self.handleEvent,
-            loop=self.loop,
-        )
-        self._dynalite.start()
+        self.loop.create_task(self._dynalite.connect(self.host, self.port))
         return True
 
     def configure(self, config):
@@ -219,8 +212,12 @@ class DynaliteDevices:
             self.area[area][CONF_PRESET] = area_presets
             self.area[area][CONF_CHANNEL] = area_channels
             # now register the channels and presets and ask for initial status if needed
+            if self.active in [CONF_ACTIVE_INIT, CONF_ACTIVE_ON]:
+                self._dynalite.request_area_preset(area)
             for channel in area_channels:
                 self.create_channel_if_new(area, channel)
+                if self.active in [CONF_ACTIVE_INIT, CONF_ACTIVE_ON]:
+                    self._dynalite.request_channel_level(area, channel)
             for preset in area_presets:
                 self.create_preset_if_new(area, preset)
 
@@ -323,41 +320,11 @@ class DynaliteDevices:
             )
         return
 
-    def get_channel_name(self, area, channel):
-        """Return the name of a channel."""
-        return f"{self.area[area][CONF_NAME]} {self.area[area][CONF_CHANNEL][channel][CONF_NAME]}"
-
-    def get_channel_fade(self, area, channel):
-        """Return the fade of a channel."""
-        return self.area[area][CONF_CHANNEL][channel][CONF_FADE]
-
-    def get_preset_name(self, area, preset):
-        """Return the name of a preset."""
-        return f"{self.area[area][CONF_NAME]} {self.area[area][CONF_PRESET][preset][CONF_NAME]}"
-
-    def get_preset_fade(self, area, preset):
-        """Return the fade of a preset."""
-        return self.area[area][CONF_PRESET][preset][CONF_FADE]
-
-    def get_multi_name(self, area):
-        """Return the name of a multi-device."""
-        return self.area[area][CONF_NAME]
-
-    def get_device_class(self, area):
-        """Return the class for a blind."""
-        return self.area[area][CONF_DEVICE_CLASS]
-
-    def getMasterArea(self, area):
-        """Get the master area when combining entities from different Dynet areas to the same area."""
+    def ensure_area(self, area):
+        """Configure a default area if it is not yet in config."""
         if area not in self.area:
-            LOGGER.error("getMasterArea - we should not get here")
-            raise BridgeError("getMasterArea - area " + str(area) + "is not in config")
-        area_config = self.area[area]
-        master_area = area_config[CONF_NAME]
-        if CONF_AREA_OVERRIDE in area_config:
-            override_area = area_config[CONF_AREA_OVERRIDE]
-            master_area = override_area if override_area.lower() != CONF_NONE else ""
-        return master_area
+            LOGGER.debug(f"adding area {area} that is not in config")
+            self.area[area] = {CONF_NAME: f"Area {area}", CONF_FADE: self.default_fade}
 
     def create_preset_if_new(self, area, preset):
         """Register a new preset."""
@@ -372,9 +339,7 @@ class DynaliteDevices:
                     f"No auto discovery and unknown preset (area {area} preset {preset}"
                 )
 
-        if area not in self.area:
-            LOGGER.debug(f"adding area {area} that is not in config")
-            self.area[area] = {CONF_NAME: f"Area {area}", CONF_FADE: self.default_fade}
+        self.ensure_area(area)
         area_config = self.area[area]
 
         if CONF_PRESET not in area_config:
@@ -422,6 +387,8 @@ class DynaliteDevices:
     def create_channel_if_new(self, area, channel):
         """Register a new channel."""
         LOGGER.debug("create_channel_if_new - area=%s, channel=%s", area, channel)
+        if channel == CONF_ALL:
+            return
         # if already configured, ignore
         if self.added_channels.get(area, {}).get(channel, False):
             return
@@ -432,9 +399,7 @@ class DynaliteDevices:
                     f"No auto discovery and unknown channel (area {area} channel {channel}"
                 )
 
-        if area not in self.area:
-            LOGGER.debug(f"adding area {area} that is not in config")
-            self.area[area] = {CONF_NAME: f"Area {area}", CONF_FADE: self.default_fade}
+        self.ensure_area(area)
         area_config = self.area[area]
 
         if CONF_CHANNEL not in area_config:
@@ -449,7 +414,7 @@ class DynaliteDevices:
                 area_config[CONF_CHANNEL][channel][CONF_HIDDEN_ENTITY] = True
 
         channel_config = area_config[CONF_CHANNEL][channel]
-        LOGGER.debug("create_channel_if_new - channel_config=%s" % channel_config)
+        LOGGER.debug("create_channel_if_new - channel_config=%s", channel_config)
         channel_type = channel_config.get(
             CONF_CHANNEL_TYPE, DEFAULT_CHANNEL_TYPE
         ).lower()
@@ -471,8 +436,8 @@ class DynaliteDevices:
 
     def handle_channel_change(self, event=None):
         """Change the level of a channel."""
-        LOGGER.debug("handle_channel_change - event=%s" % event.data)
-        LOGGER.debug("handle_channel_change called event = %s" % event.msg)
+        LOGGER.debug("handle_channel_change - event=%s", event.data)
+        LOGGER.debug("handle_channel_change called event = %s", event.msg)
         area = event.data[CONF_AREA]
         channel = event.data[CONF_CHANNEL]
         try:
@@ -485,35 +450,28 @@ class DynaliteDevices:
         if action == CONF_ACTION_REPORT:
             actual_level = (255 - event.data[CONF_ACT_LEVEL]) / 254
             target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
+            channelToSet = self.added_channels[area][channel]
+            channelToSet.update_level(actual_level, target_level)
+            self.updateDevice(channelToSet)
         elif action == CONF_ACTION_CMD:
-            if CONF_TRGT_LEVEL in event.data:
-                target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
-                # when there is only a "set channel level" command, assume that this is both the actual and the target
-                actual_level = target_level
-            else:  # stop fade command
-                try:
-                    if channel == CONF_ALL:
-                        for channel in self.added_channels[int(area)]:
-                            channelToSet = self.added_channels[int(area)][channel]
-                            channelToSet.stop_fade()
-                            self.updateDevice(channelToSet)
-                    else:
-                        channelToSet = self.added_channels[int(area)][int(channel)]
-                        channelToSet.stop_fade()
-                        self.updateDevice(channelToSet)
-                except KeyError:
-                    pass
-                return
+            target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
+            # when there is only a "set channel level" command, assume that this is both the actual and the target
+            actual_level = target_level
+            channelToSet = self.added_channels[area][channel]
+            channelToSet.update_level(actual_level, target_level)
+            self.updateDevice(channelToSet)
+        elif action == CONF_ACTION_STOP:
+            if channel == CONF_ALL:
+                for channel in self.added_channels.get(area, {}):
+                    channelToSet = self.added_channels[area][channel]
+                    channelToSet.stop_fade()
+                    self.updateDevice(channelToSet)
+            else:
+                channelToSet = self.added_channels[area][channel]
+                channelToSet.stop_fade()
+                self.updateDevice(channelToSet)
         else:
             LOGGER.error("unknown action for channel change %s", action)
-            return
-        try:
-            channelToSet = self.added_channels[int(area)][int(channel)]
-            channelToSet.update_level(actual_level, target_level)
-            # to only call if it was already added to ha
-            self.updateDevice(channelToSet)
-        except KeyError:
-            pass
 
     def add_timer_listener(self, callback_func):
         """Add a listener to the timer and start if needed."""
@@ -544,3 +502,39 @@ class DynaliteDevices:
         """Select a preset in an area."""
         fade = self.area[area][CONF_PRESET][preset][CONF_FADE]
         self._dynalite.select_preset(area, preset, fade)
+
+    def get_channel_name(self, area, channel):
+        """Return the name of a channel."""
+        return f"{self.area[area][CONF_NAME]} {self.area[area][CONF_CHANNEL][channel][CONF_NAME]}"
+
+    def get_channel_fade(self, area, channel):
+        """Return the fade of a channel."""
+        return self.area[area][CONF_CHANNEL][channel][CONF_FADE]
+
+    def get_preset_name(self, area, preset):
+        """Return the name of a preset."""
+        return f"{self.area[area][CONF_NAME]} {self.area[area][CONF_PRESET][preset][CONF_NAME]}"
+
+    def get_preset_fade(self, area, preset):
+        """Return the fade of a preset."""
+        return self.area[area][CONF_PRESET][preset][CONF_FADE]
+
+    def get_multi_name(self, area):
+        """Return the name of a multi-device."""
+        return self.area[area][CONF_NAME]
+
+    def get_device_class(self, area):
+        """Return the class for a blind."""
+        return self.area[area][CONF_DEVICE_CLASS]
+
+    def getMasterArea(self, area):
+        """Get the master area when combining entities from different Dynet areas to the same area."""
+        if area not in self.area:
+            LOGGER.error("getMasterArea - we should not get here")
+            raise BridgeError("getMasterArea - area " + str(area) + "is not in config")
+        area_config = self.area[area]
+        master_area = area_config[CONF_NAME]
+        if CONF_AREA_OVERRIDE in area_config:
+            override_area = area_config[CONF_AREA_OVERRIDE]
+            master_area = override_area if override_area.lower() != CONF_NONE else ""
+        return master_area
