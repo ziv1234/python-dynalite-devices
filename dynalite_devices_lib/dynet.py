@@ -36,7 +36,7 @@ class PacketError(Exception):
 class DynetPacket(object):
     """Class for a Dynet network packet."""
 
-    def __init__(self, msg=None, shouldRun=None):
+    def __init__(self, msg=None):
         """Initialize the packet."""
         self.opcodeType = None
         self.sync = None
@@ -47,7 +47,6 @@ class DynetPacket(object):
         self.chk = None
         if msg is not None:
             self.fromMsg(msg)
-        self.shouldRun = shouldRun
 
     def toMsg(self, sync=28, area=0, command=0, data=[0, 0, 0], join=255):
         """Convert packet to a binary message."""
@@ -211,9 +210,9 @@ class DynetControl(object):
         )
         self._dynet.write(packet)
 
-    async def async_request_channel_level(self, area, channel, shouldRun):
+    def request_channel_level(self, area, channel):
         """Request a level for a specific channel."""
-        packet = DynetPacket(shouldRun=shouldRun)
+        packet = DynetPacket()
         packet.toMsg(
             sync=28,
             area=area,
@@ -223,7 +222,7 @@ class DynetControl(object):
         )
         self._dynet.write(packet)
 
-    async def async_stop_channel_fade(self, area, channel):
+    def stop_channel_fade(self, area, channel):
         """Stop fading of a channel - async."""
         packet = DynetPacket()
         packet.toMsg(
@@ -235,9 +234,9 @@ class DynetControl(object):
         )
         self._dynet.write(packet)
 
-    async def async_request_area_preset(self, area, shouldRun):
+    def request_area_preset(self, area):
         """Request current preset of an area."""
-        packet = DynetPacket(shouldRun=shouldRun)
+        packet = DynetPacket()
         packet.toMsg(
             sync=28,
             area=area,
@@ -436,28 +435,27 @@ class Dynet(object):
             return
 
         packet = self._outBuffer[0]
-        if packet.shouldRun is None or packet.shouldRun():
-            self._sending = True
-            msg = bytearray()
-            msg.append(packet.sync)
-            msg.append(packet.area)
-            msg.append(packet.data[0])
-            msg.append(packet.command)
-            msg.append(packet.data[1])
-            msg.append(packet.data[2])
-            msg.append(packet.join)
-            msg.append(packet.chk)
-            assert self.active in [
-                CONF_ACTIVE_ON,
-                CONF_ACTIVE_INIT,
-            ] or packet.command not in [
-                OpcodeType.REQUEST_CHANNEL_LEVEL.value,
-                OpcodeType.REQUEST_PRESET.value,
-            ]
-            self._transport.write(msg)
-            LOGGER.debug("Dynet Sent: %s" % msg)
-            self._lastSent = int(round(time.time() * 1000))
-            self._sending = False
+        self._sending = True
+        msg = bytearray()
+        msg.append(packet.sync)
+        msg.append(packet.area)
+        msg.append(packet.data[0])
+        msg.append(packet.command)
+        msg.append(packet.data[1])
+        msg.append(packet.data[2])
+        msg.append(packet.join)
+        msg.append(packet.chk)
+        assert self.active in [
+            CONF_ACTIVE_ON,
+            CONF_ACTIVE_INIT,
+        ] or packet.command not in [
+            OpcodeType.REQUEST_CHANNEL_LEVEL.value,
+            OpcodeType.REQUEST_PRESET.value,
+        ]
+        self._transport.write(msg)
+        LOGGER.debug("Dynet Sent: %s" % msg)
+        self._lastSent = int(round(time.time() * 1000))
+        self._sending = False
 
         del self._outBuffer[0]
         if len(self._outBuffer) > 0:

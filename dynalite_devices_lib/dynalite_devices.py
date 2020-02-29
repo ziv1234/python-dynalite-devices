@@ -92,6 +92,7 @@ class DynaliteDevices:
         self.timer_callbacks = set()
         self.template = {}
         self.area = {}
+        self._dynalite = None
 
     async def async_setup(self):
         """Set up a Dynalite bridge based on host parameter in the config."""
@@ -99,20 +100,14 @@ class DynaliteDevices:
         if not self.loop:
             self.loop = asyncio.get_running_loop()
         # Run the dynalite object. Assumes self.configure() has been called
-        # self._dynalite = Dynalite(host=self.host, port=self.port, active=self.active, poll_timer=self.poll_timer, loop=self.loop)
         self._dynalite = Dynalite(
-            self.port, self.host, self.active, self.poll_timer, self.loop
+            host=self.host,
+            port=self.port,
+            active=self.active,
+            poll_timer=self.poll_timer,
+            broadcast_func=self.handleEvent,
+            loop=self.loop,
         )
-        eventHandler = self._dynalite.addListener(listenerFunction=self.handleEvent)
-        eventHandler.monitorEvent("*")
-        presetChangeHandler = self._dynalite.addListener(
-            listenerFunction=self.handle_preset_selection
-        )
-        presetChangeHandler.monitorEvent(EVENT_PRESET)
-        channelChangeHandler = self._dynalite.addListener(
-            listenerFunction=self.handle_channel_change
-        )
-        channelChangeHandler.monitorEvent(EVENT_CHANNEL)
         self._dynalite.start()
         return True
 
@@ -223,7 +218,7 @@ class DynaliteDevices:
                         area_presets[preset] = default_presets[preset]
             self.area[area][CONF_PRESET] = area_presets
             self.area[area][CONF_CHANNEL] = area_channels
-            # now register the channels and presets
+            # now register the channels and presets and ask for initial status if needed
             for channel in area_channels:
                 self.create_channel_if_new(area, channel)
             for preset in area_presets:
@@ -305,17 +300,27 @@ class DynaliteDevices:
         if self.updateDeviceFunc:
             self.updateDeviceFunc(device)
 
-    def handleEvent(self, event=None, dynalite=None):
+    def handleEvent(self, event=None):
         """Handle all events."""
         LOGGER.debug("handleEvent - type=%s event=%s" % (event.eventType, event.data))
         if event.eventType == EVENT_CONNECTED:
-            LOGGER.debug("received CONNECTED message")
+            LOGGER.debug("Received CONNECTED message")
             self.connected = True
             self.updateDevice(CONF_ALL)
         elif event.eventType == EVENT_DISCONNECTED:
-            LOGGER.debug("received DISCONNECTED message")
+            LOGGER.debug("Received DISCONNECTED message")
             self.connected = False
             self.updateDevice(CONF_ALL)
+        elif event.eventType == EVENT_PRESET:
+            LOGGER.debug("Received PRESET message")
+            self.handle_preset_selection(event)
+        elif event.eventType == EVENT_CHANNEL:
+            LOGGER.debug("Received PRESET message")
+            self.handle_channel_change(event)
+        else:
+            LOGGER.debug(
+                "Received unknown message type=%s data=%s", event.eventType, event.data
+            )
         return
 
     def get_channel_name(self, area, channel):
@@ -394,7 +399,7 @@ class DynaliteDevices:
             "Creating Dynalite preset area=%s preset=%s hidden=%s", area, preset, hidden
         )
 
-    def handle_preset_selection(self, event=None, dynalite=None):
+    def handle_preset_selection(self, event=None):
         """Change the selected preset."""
         LOGGER.debug("handle_preset_selection - event=%s", event.data)
         area = event.data[CONF_AREA]
@@ -464,7 +469,7 @@ class DynaliteDevices:
         self.added_channels[area][channel] = new_device
         LOGGER.debug("Creating Dynalite channel area=%s channel=%s", area, channel)
 
-    def handle_channel_change(self, event=None, dynalite=None):
+    def handle_channel_change(self, event=None):
         """Change the level of a channel."""
         LOGGER.debug("handle_channel_change - event=%s" % event.data)
         LOGGER.debug("handle_channel_change called event = %s" % event.msg)

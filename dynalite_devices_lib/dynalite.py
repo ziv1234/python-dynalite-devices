@@ -26,60 +26,19 @@ from .dynet import Dynet, DynetControl
 from .event import DynetEvent
 
 
-class Broadcaster(object):
-    """Class to broadcast event to listeners."""
-
-    def __init__(self, listenerFunction=None, loop=None):
-        """Initialize the broadcaster."""
-        self._listenerFunction = listenerFunction
-        self._monitoredEvents = []
-        self._loop = loop
-
-    def monitorEvent(self, eventType=None):
-        """Set broadcaster to monitor an event or all."""
-        eventType = eventType.upper()
-        if eventType not in self._monitoredEvents:
-            self._monitoredEvents.append(eventType.upper())
-
-    def unmonitorEvent(self, eventType=None):
-        """Stop monitoring an event."""
-        eventType = eventType.upper()
-        if eventType in self._monitoredEvents:
-            self._monitoredEvents.remove(eventType.upper())
-
-    def update(self, event=None, dynalite=None):
-        """Update listener with an event if relevant."""
-        if event is None:
-            return
-        if (
-            event.eventType not in self._monitoredEvents
-            and "*" not in self._monitoredEvents
-        ):
-            return
-        if self._loop:
-            self._loop.create_task(self._callUpdater(event=event, dynalite=dynalite))
-        else:
-            self._listenerFunction(event=event, dynalite=dynalite)
-
-    @asyncio.coroutine
-    def _callUpdater(self, event=None, dynalite=None):
-        """Call listener callback function."""
-        self._listenerFunction(event=event, dynalite=dynalite)
-
-
 class Dynalite(object):
     """Class to represent the interaction with Dynalite."""
 
-    def __init__(self, port, host, active, poll_timer, loop=None):
+    def __init__(self, port, host, active, poll_timer, broadcast_func, loop=None):
         """Initialize the class."""
         self.host = host
         self.port = port
         self.active = active
         self.poll_timer = poll_timer
         self.loop = loop if loop else asyncio.get_event_loop()
-        self._listeners = []
         self._dynet = None
         self.control = None
+        self.broadcast_func = broadcast_func
 
     def start(self):
         """Queue request to start the class."""
@@ -92,7 +51,7 @@ class Dynalite(object):
             port=self.port,
             active=self.active,
             loop=self.loop,
-            broadcaster=self.processTraffic,
+            broadcaster=self.broadcast,
             onConnect=self._connected,
             onDisconnect=self._disconnection,
         )
@@ -119,38 +78,9 @@ class Dynalite(object):
         yield from asyncio.sleep(1)  # Don't overload the network
         self.connect()
 
-    def processTraffic(self, event):
-        """Process an event that arrived from Dynet - queue."""
-        self.loop.create_task(self._processTraffic(event))
-
-    @asyncio.coroutine
-    def _processTraffic(self, event):
-        """Process an event that arrived from Dynet - async."""
-        # The logic here is:
-        # - new area is created - ask for the current preset
-        # - preset selected - turn the preset on but don't send it as a command
-        # - new channel is created - ask for the current level
-        # - channel update - update the level and if it is fading (actual != target), schedule a timer to ask again
-        # - channel set command - request current level (may not be the target because of fade)
-
-        # First handle, and then broadcast so broadcast receivers have updated device levels and presets
-        self.broadcast(event)
-
     def broadcast(self, event):
         """Broadcast an event to all listeners - queue."""
-        self.loop.create_task(self._broadcast(event))
-
-    @asyncio.coroutine
-    def _broadcast(self, event):
-        """Broadcast an event to all listeners - async."""
-        for listenerFunction in self._listeners:
-            listenerFunction.update(event=event, dynalite=self)
-
-    def addListener(self, listenerFunction=None):
-        """Create a new listener to the class."""
-        broadcaster = Broadcaster(listenerFunction=listenerFunction, loop=self.loop)
-        self._listeners.append(broadcaster)
-        return broadcaster
+        self.loop.call_soon(self.broadcast_func, event)
 
     def set_channel_level(self, area, channel, level, fade):
         """Set the level of a channel."""
@@ -163,7 +93,7 @@ class Dynalite(object):
             CONF_TRGT_LEVEL: int(255 - 254.0 * level),
             CONF_ACTION: CONF_ACTION_CMD,
         }
-        self.processTraffic(DynetEvent(eventType=EVENT_CHANNEL, data=broadcastData))
+        self.broadcast(DynetEvent(eventType=EVENT_CHANNEL, data=broadcastData))
 
     def select_preset(self, area, preset, fade):
         """Select a preset in an area."""
@@ -172,4 +102,4 @@ class Dynalite(object):
             CONF_AREA: area,
             CONF_PRESET: preset,
         }
-        self.processTraffic(DynetEvent(eventType=EVENT_PRESET, data=broadcastData))
+        self.broadcast(DynetEvent(eventType=EVENT_PRESET, data=broadcastData))
