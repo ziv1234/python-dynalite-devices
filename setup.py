@@ -5,16 +5,15 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
-import codecs
-import os
-import re
-
 # io.open is needed for projects that support Python 2.7
 # It ensures open() defaults to text mode with universal newlines,
 # and accepts an argument to specify the text encoding
 # Python 3 only projects can skip this import
+import codecs
 from io import open
+import os
 from os import path
+import re
 
 # Always prefer setuptools over distutils
 from setuptools import find_packages, setup
