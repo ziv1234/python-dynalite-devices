@@ -76,7 +76,6 @@ class Dynalite(object):
             self.write()  # write if there is something in the buffers
             try:
                 data = await self._reader.read(100)
-                LOGGER.debug("XXXX read %s bytes", len(data))
                 if len(data) > 0:
                     self.receive(data)
                     continue

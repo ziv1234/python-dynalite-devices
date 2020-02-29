@@ -382,7 +382,6 @@ class DynaliteDevices:
         # If active is set to full, query all channels in the area
         if self.active == CONF_ACTIVE_ON:
             for channel in self.area[area].get(CONF_CHANNEL, {}):
-                LOGGER.debug("XXX - querying area %s channel %s", area, channel)
                 self._dynalite.request_channel_level(area, channel)
 
     def create_channel_if_new(self, area, channel):
