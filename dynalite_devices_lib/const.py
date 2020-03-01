@@ -30,7 +30,6 @@ CONF_FADE = "fade"
 CONF_HIDDEN_ENTITY = "hidden"
 CONF_HOST = "host"
 CONF_JOIN = "join"
-CONF_LEVEL = "level"
 CONF_NAME = "name"
 CONF_NO_DEFAULT = "nodefault"
 CONF_NONE = "none"
@@ -70,15 +69,15 @@ DEFAULT_TEMPLATES = {
         CONF_TILT_TIME: 0,
     },
 }
+DEFAULT_PRESETS = {
+    "1": {CONF_NAME: "On"},
+    "4": {CONF_NAME: "Off"},
+}
 
 EVENT_CHANNEL = "CHANNEL"
-EVENT_CONFIGURED = "CONFIGURED"
 EVENT_CONNECTED = "CONNECTED"
 EVENT_DISCONNECTED = "DISCONNECTED"
-EVENT_NEWPRESET = "NEWPRESET"
-EVENT_NEWCHANNEL = "NEWCHANNEL"
 EVENT_PRESET = "PRESET"
-EVENT_REQPRESET = "REQPRESET"
 
 # if a request for channel level didn't get acknowledge, when to retry
 # (subsequent retries will be 2x, 4x, 8x, etc.)

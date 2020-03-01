@@ -46,6 +46,7 @@ from .const import (
     DEFAULT_CHANNEL_TYPE,
     DEFAULT_NAME,
     DEFAULT_PORT,
+    DEFAULT_PRESETS,
     DEFAULT_TEMPLATES,
     EVENT_CHANNEL,
     EVENT_CONNECTED,
@@ -132,7 +133,7 @@ class DynaliteDevices:
                     conf, DEFAULT_TEMPLATES[template][conf]
                 )
         # create default presets
-        config_presets = config.get(CONF_PRESET, {})
+        config_presets = config.get(CONF_PRESET, DEFAULT_PRESETS)
         default_presets = {}
         for preset in config_presets:
             cur_config = config_presets[preset]
