@@ -146,8 +146,9 @@ class Dynalite(object):
                 self._inBuffer.append(int(byte))
         if len(self._inBuffer) < 8:
             LOGGER.debug(
-                "Received %d bytes, not enough to process: %s"
-                % (len(self._inBuffer), self._inBuffer)
+                "Received %d bytes, not enough to process: %s",
+                len(self._inBuffer),
+                self._inBuffer,
             )
         packet = None
         while len(self._inBuffer) >= 8 and packet is None:
@@ -155,12 +156,12 @@ class Dynalite(object):
             if SyncType.has_value(firstByte):
                 if firstByte == SyncType.DEBUG_MSG.value:
                     bytemsg = "".join(chr(c) for c in self._inBuffer[1:7])
-                    LOGGER.debug("Dynet DEBUG message %s" % bytemsg)
+                    LOGGER.debug("Dynet DEBUG message %s", bytemsg)
                     self._inBuffer = self._inBuffer[8:]
                     continue
                 elif firstByte == SyncType.DEVICE.value:
                     LOGGER.debug(
-                        "Not handling Dynet DEVICE message %s" % self._inBuffer[:8]
+                        "Not handling Dynet DEVICE message %s", self._inBuffer[:8]
                     )
                     self._inBuffer = self._inBuffer[8:]
                     continue
@@ -173,13 +174,13 @@ class Dynalite(object):
             if packet is None:
                 hexString = ":".join("{:02x}".format(c) for c in self._inBuffer[:8])
                 LOGGER.debug(
-                    "Unable to process packet %s - moving one byte forward" % hexString
+                    "Unable to process packet %s - moving one byte forward", hexString
                 )
                 del self._inBuffer[0]
                 continue
             else:
                 self._inBuffer = self._inBuffer[8:]
-            LOGGER.debug("Have packet: %s" % packet)
+            LOGGER.debug("Have packet: %s", packet)
             if hasattr(packet, "opcodeType") and packet.opcodeType is not None:
                 inboundHandler = DynetInbound()
                 if hasattr(inboundHandler, packet.opcodeType.lower()):
@@ -188,7 +189,7 @@ class Dynalite(object):
                         self.broadcast(event)
                 else:
                     LOGGER.debug(
-                        "Unhandled Dynet Inbound (%s): %s" % (packet.opcodeType, packet)
+                        "Unhandled Dynet Inbound (%s): %s", packet.opcodeType, packet
                     )
             else:
                 LOGGER.debug("Unhandled Dynet Inbound: %s" % packet)
