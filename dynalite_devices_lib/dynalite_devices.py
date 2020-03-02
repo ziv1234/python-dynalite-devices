@@ -17,7 +17,6 @@ from .const import (
     CONF_AREA_OVERRIDE,
     CONF_AUTO_DISCOVER,
     CONF_CHANNEL,
-    CONF_CHANNEL_CLASS,
     CONF_CHANNEL_COVER,
     CONF_CHANNEL_TYPE,
     CONF_CLOSE_PRESET,
@@ -186,7 +185,7 @@ class DynaliteDevices:
                     CONF_CLOSE_PRESET,
                     CONF_STOP_PRESET,
                 ]
-                conf_values = [CONF_CHANNEL_CLASS, CONF_DURATION, CONF_TILT_TIME]
+                conf_values = [CONF_DEVICE_CLASS, CONF_DURATION, CONF_TILT_TIME]
                 conf_channels = [CONF_CHANNEL_COVER]
 
                 for conf in self.template[template]:
@@ -529,6 +528,14 @@ class DynaliteDevices:
     def get_device_class(self, area):
         """Return the class for a blind."""
         return self.area[area][CONF_DEVICE_CLASS]
+
+    def get_cover_duration(self, area):
+        """Return the class for a blind."""
+        return self.area[area][CONF_DURATION]
+
+    def get_cover_tilt_duration(self, area):
+        """Return the class for a blind."""
+        return self.area[area][CONF_TILT_TIME]
 
     def get_master_area(self, area):
         """Get the master area when combining entities from different Dynet areas to the same area."""
