@@ -30,7 +30,7 @@ from .inbound import DynetInbound
 from .opcodes import SyncType
 
 
-class Dynalite(object):
+class Dynalite:
     """Class to represent the interaction with Dynalite."""
 
     def __init__(self, broadcast_func):
@@ -39,10 +39,10 @@ class Dynalite(object):
         self.port = None
         self.loop = None
         self.broadcast_func = broadcast_func
-        self._inBuffer = []
-        self._outBuffer = []
-        self._lastSent = None
-        self._messageDelay = 200
+        self._in_buffer = []
+        self._out_buffer = []
+        self._last_sent = None
+        self._message_delay = 200
         self._sending = False
         self._reader = None
         self._writer = None
@@ -89,14 +89,14 @@ class Dynalite(object):
                 return  # stop loop
             self._reader = None
             self._writer = None
-            self.broadcast(DynetEvent(eventType=EVENT_DISCONNECTED, data={}))
+            self.broadcast(DynetEvent(event_type=EVENT_DISCONNECTED, data={}))
             await asyncio.sleep(1)  # Don't overload the network
             while not await self.connect_internal():
                 if self.resetting:
                     self._reader = None
                     return  # stop loop
                 await asyncio.sleep(1)  # Don't overload the network
-            self.broadcast(DynetEvent(eventType=EVENT_CONNECTED, data={}))
+            self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
 
     def broadcast(self, event):
         """Broadcast an event to all listeners - queue."""
@@ -106,23 +106,23 @@ class Dynalite(object):
         """Set the level of a channel."""
         packet = DynetPacket.set_channel_level_packet(area, channel, level, fade)
         self.write(packet)
-        broadcastData = {
+        broadcast_data = {
             CONF_AREA: area,
             CONF_CHANNEL: channel,
             CONF_TRGT_LEVEL: int(255 - 254.0 * level),
             CONF_ACTION: CONF_ACTION_CMD,
         }
-        self.broadcast(DynetEvent(eventType=EVENT_CHANNEL, data=broadcastData))
+        self.broadcast(DynetEvent(event_type=EVENT_CHANNEL, data=broadcast_data))
 
     def select_preset(self, area, preset, fade):
         """Select a preset in an area."""
         packet = DynetPacket.select_area_preset_packet(area, preset, fade)
         self.write(packet)
-        broadcastData = {
+        broadcast_data = {
             CONF_AREA: area,
             CONF_PRESET: preset,
         }
-        self.broadcast(DynetEvent(eventType=EVENT_PRESET, data=broadcastData))
+        self.broadcast(DynetEvent(event_type=EVENT_PRESET, data=broadcast_data))
 
     def request_channel_level(self, area, channel):
         """Request a level for a specific channel."""
@@ -143,64 +143,65 @@ class Dynalite(object):
         """Handle data that was received."""
         if data is not None:
             for byte in data:
-                self._inBuffer.append(int(byte))
-        if len(self._inBuffer) < 8:
+                self._in_buffer.append(int(byte))
+        if len(self._in_buffer) < 8:
             LOGGER.debug(
                 "Received %d bytes, not enough to process: %s",
-                len(self._inBuffer),
-                self._inBuffer,
+                len(self._in_buffer),
+                self._in_buffer,
             )
         packet = None
-        while len(self._inBuffer) >= 8 and packet is None:
-            firstByte = self._inBuffer[0]
-            if SyncType.has_value(firstByte):
-                if firstByte == SyncType.DEBUG_MSG.value:
-                    bytemsg = "".join(chr(c) for c in self._inBuffer[1:7])
+        while len(self._in_buffer) >= 8 and packet is None:
+            first_byte = self._in_buffer[0]
+            if SyncType.has_value(first_byte):
+                if first_byte == SyncType.DEBUG_MSG.value:
+                    bytemsg = "".join(chr(c) for c in self._in_buffer[1:7])
                     LOGGER.debug("Dynet DEBUG message %s", bytemsg)
-                    self._inBuffer = self._inBuffer[8:]
+                    self._in_buffer = self._in_buffer[8:]
                     continue
-                elif firstByte == SyncType.DEVICE.value:
+                if first_byte == SyncType.DEVICE.value:
                     LOGGER.debug(
-                        "Not handling Dynet DEVICE message %s", self._inBuffer[:8]
+                        "Not handling Dynet DEVICE message %s", self._in_buffer[:8]
                     )
-                    self._inBuffer = self._inBuffer[8:]
+                    self._in_buffer = self._in_buffer[8:]
                     continue
-                elif firstByte == SyncType.LOGICAL.value:
+                if first_byte == SyncType.LOGICAL.value:
                     try:
-                        packet = DynetPacket(msg=self._inBuffer[:8])
+                        packet = DynetPacket(msg=self._in_buffer[:8])
                     except PacketError as err:
                         LOGGER.warning(err)
                         packet = None
+                else:
+                    LOGGER.error("wrong first_byte - we shouldn't get here")
             if packet is None:
-                hexString = ":".join("{:02x}".format(c) for c in self._inBuffer[:8])
+                hex_string = ":".join("{:02x}".format(c) for c in self._in_buffer[:8])
                 LOGGER.debug(
-                    "Unable to process packet %s - moving one byte forward", hexString
+                    "Unable to process packet %s - moving one byte forward", hex_string
                 )
-                del self._inBuffer[0]
+                del self._in_buffer[0]
                 continue
-            else:
-                self._inBuffer = self._inBuffer[8:]
+            self._in_buffer = self._in_buffer[8:]
             LOGGER.debug("Have packet: %s", packet)
-            if hasattr(packet, "opcodeType") and packet.opcodeType is not None:
-                inboundHandler = DynetInbound()
-                if hasattr(inboundHandler, packet.opcodeType.lower()):
-                    event = getattr(inboundHandler, packet.opcodeType.lower())(packet)
+            if hasattr(packet, "opcode_type") and packet.opcode_type is not None:
+                inbound_handler = DynetInbound()
+                if hasattr(inbound_handler, packet.opcode_type.lower()):
+                    event = getattr(inbound_handler, packet.opcode_type.lower())(packet)
                     if event:
                         self.broadcast(event)
                 else:
                     LOGGER.debug(
-                        "Unhandled Dynet Inbound (%s): %s", packet.opcodeType, packet
+                        "Unhandled Dynet Inbound (%s): %s", packet.opcode_type, packet
                     )
             else:
-                LOGGER.debug("Unhandled Dynet Inbound: %s" % packet)
+                LOGGER.debug("Unhandled Dynet Inbound: %s", packet)
         # If there is still buffer to process - start again
-        if len(self._inBuffer) >= 8:
+        if len(self._in_buffer) >= 8:
             self.loop.call_soon(self.receive)
 
-    def write(self, newPacket=None):
+    def write(self, new_packet=None):
         """Write a packet or trigger write loop."""
-        if newPacket is not None:
-            self._outBuffer.append(newPacket)
+        if new_packet is not None:
+            self._out_buffer.append(new_packet)
         if self._writer is None:
             LOGGER.debug("write before transport is ready. queuing")
             return
@@ -208,17 +209,17 @@ class Dynalite(object):
             LOGGER.debug("Connection busy - queuing packet")
             self.loop.call_later(1, self.write)
             return
-        if self._lastSent is None:
-            self._lastSent = int(round(time.time() * 1000))
+        if self._last_sent is None:
+            self._last_sent = int(round(time.time() * 1000))
         current_milli_time = int(round(time.time() * 1000))
-        elapsed = current_milli_time - self._lastSent
-        delay = 0 - (elapsed - self._messageDelay)
+        elapsed = current_milli_time - self._last_sent
+        delay = 0 - (elapsed - self._message_delay)
         if delay > 0:
             self.loop.call_later(delay / 1000, self.write)
             return
-        if len(self._outBuffer) == 0:
+        if len(self._out_buffer) == 0:
             return
-        packet = self._outBuffer[0]
+        packet = self._out_buffer[0]
         self._sending = True
         msg = bytearray()
         msg.append(packet.sync)
@@ -230,12 +231,12 @@ class Dynalite(object):
         msg.append(packet.join)
         msg.append(packet.chk)
         self._writer.write(msg)
-        LOGGER.debug("Dynet Sent: %s" % msg)
-        self._lastSent = int(round(time.time() * 1000))
+        LOGGER.debug("Dynet Sent: %s", msg)
+        self._last_sent = int(round(time.time() * 1000))
         self._sending = False
-        del self._outBuffer[0]
-        if len(self._outBuffer) > 0:
-            self.loop.call_later(self._messageDelay / 1000, self.write)
+        del self._out_buffer[0]
+        if len(self._out_buffer) > 0:
+            self.loop.call_later(self._message_delay / 1000, self.write)
 
     async def async_reset(self):
         """Close sockets and timers."""

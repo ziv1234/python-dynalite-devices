@@ -71,18 +71,24 @@ class BridgeError(Exception):
     def __init__(self, message):
         """Initialize the exception."""
         self.message = message
+        super().__init__(message)
 
 
 class DynaliteDevices:
     """Manages a single Dynalite bridge."""
 
-    def __init__(self, loop=None, newDeviceFunc=None, updateDeviceFunc=None):
+    def __init__(self, loop=None, new_device_func=None, update_device_func=None):
         """Initialize the system."""
+        self.host = None
+        self.port = None
+        self.name = None
+        self.poll_timer = None
+        self.default_fade = None
         self.active = None
         self.auto_discover = None
         self.loop = loop
-        self.newDeviceFunc = newDeviceFunc
-        self.updateDeviceFunc = updateDeviceFunc
+        self.new_device_func = new_device_func
+        self.update_device_func = update_device_func
         self.configured = False
         self.connected = False
         self.added_presets = {}
@@ -94,7 +100,7 @@ class DynaliteDevices:
         self.timer_callbacks = set()
         self.template = {}
         self.area = {}
-        self._dynalite = Dynalite(broadcast_func=self.handleEvent)
+        self._dynalite = Dynalite(broadcast_func=self.handle_event)
         self.resetting = False
 
     async def async_setup(self):
@@ -230,8 +236,8 @@ class DynaliteDevices:
         # register the time covers
         self.register_time_covers()
         # callback for all devices
-        if self.newDeviceFunc and self.waiting_devices:
-            self.newDeviceFunc(self.waiting_devices)
+        if self.new_device_func and self.waiting_devices:
+            self.new_device_func(self.waiting_devices)
             self.waiting_devices = []
         self.configured = True
 
@@ -249,7 +255,7 @@ class DynaliteDevices:
                 new_device.set_device(
                     2, self.added_presets[area][area_config[CONF_ROOM_OFF]]
                 )
-                self.registerNewDevice("switch", new_device, False)
+                self.register_new_device("switch", new_device, False)
 
     def register_time_covers(self):
         """Register the time covers from three presets and a channel each."""
@@ -278,15 +284,15 @@ class DynaliteDevices:
                 else:
                     channel_device = DynaliteBaseDevice(area, self)
                 new_device.set_device(4, channel_device)
-                self.registerNewDevice("cover", new_device, False)
+                self.register_new_device("cover", new_device, False)
 
-    def registerNewDevice(self, category, device, hidden):
+    def register_new_device(self, category, device, hidden):
         """Register a new device and group all the ones prior to CONFIGURED event together."""
         # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
         if not hidden:
             if self.configured:
-                if self.newDeviceFunc:
-                    self.newDeviceFunc([device])
+                if self.new_device_func:
+                    self.new_device_func([device])
             else:  # send all the devices together when configured
                 self.waiting_devices.append(device)
 
@@ -295,38 +301,37 @@ class DynaliteDevices:
         """Return whether bridge is available."""
         return self.connected
 
-    def updateDevice(self, device):
+    def update_device(self, device):
         """Update one or more devices."""
-        if self.updateDeviceFunc:
-            self.updateDeviceFunc(device)
+        if self.update_device_func:
+            self.update_device_func(device)
 
-    def handleEvent(self, event=None):
+    def handle_event(self, event=None):
         """Handle all events."""
-        LOGGER.debug("handleEvent - type=%s event=%s" % (event.eventType, event.data))
-        if event.eventType == EVENT_CONNECTED:
+        LOGGER.debug("handle_event - type=%s event=%s", event.event_type, event.data)
+        if event.event_type == EVENT_CONNECTED:
             LOGGER.debug("Received CONNECTED message")
             self.connected = True
-            self.updateDevice(CONF_ALL)
-        elif event.eventType == EVENT_DISCONNECTED:
+            self.update_device(CONF_ALL)
+        elif event.event_type == EVENT_DISCONNECTED:
             LOGGER.debug("Received DISCONNECTED message")
             self.connected = False
-            self.updateDevice(CONF_ALL)
-        elif event.eventType == EVENT_PRESET:
+            self.update_device(CONF_ALL)
+        elif event.event_type == EVENT_PRESET:
             LOGGER.debug("Received PRESET message")
             self.handle_preset_selection(event)
-        elif event.eventType == EVENT_CHANNEL:
+        elif event.event_type == EVENT_CHANNEL:
             LOGGER.debug("Received PRESET message")
             self.handle_channel_change(event)
         else:
             LOGGER.debug(
-                "Received unknown message type=%s data=%s", event.eventType, event.data
+                "Received unknown message type=%s data=%s", event.event_type, event.data
             )
-        return
 
     def ensure_area(self, area):
         """Configure a default area if it is not yet in config."""
         if area not in self.area:
-            LOGGER.debug(f"adding area {area} that is not in config")
+            LOGGER.debug("adding area %s that is not in config", area)
             self.area[area] = {CONF_NAME: f"Area {area}", CONF_FADE: self.default_fade}
 
     def create_preset_if_new(self, area, preset):
@@ -356,7 +361,7 @@ class DynaliteDevices:
         hidden = area_config[CONF_PRESET][preset].get(CONF_HIDDEN_ENTITY, False)
         new_device = DynalitePresetSwitchDevice(area, preset, self,)
         new_device.set_level(0)
-        self.registerNewDevice("switch", new_device, hidden)
+        self.register_new_device("switch", new_device, hidden)
         if area not in self.added_presets:
             self.added_presets[area] = {}
         self.added_presets[area][preset] = new_device
@@ -375,13 +380,13 @@ class DynaliteDevices:
             # Unknown and no autodiscover
             return
         # Update all the preset devices
-        for curPresetInArea in self.added_presets[area]:
-            device = self.added_presets[area][curPresetInArea]
-            if curPresetInArea == preset:
+        for cur_preset_in_area in self.added_presets[area]:
+            device = self.added_presets[area][cur_preset_in_area]
+            if cur_preset_in_area == preset:
                 device.set_level(1)
             else:
                 device.set_level(0)
-            self.updateDevice(device)
+            self.update_device(device)
         # If active is set to full, query all channels in the area
         if self.active == CONF_ACTIVE_ON:
             for channel in self.area[area].get(CONF_CHANNEL, {}):
@@ -421,10 +426,10 @@ class DynaliteDevices:
         hidden = channel_config.get(CONF_HIDDEN_ENTITY, False)
         if channel_type == "light":
             new_device = DynaliteChannelLightDevice(area, channel, self,)
-            self.registerNewDevice("light", new_device, hidden)
+            self.register_new_device("light", new_device, hidden)
         elif channel_type == "switch":
             new_device = DynaliteChannelSwitchDevice(area, channel, self,)
-            self.registerNewDevice("switch", new_device, hidden)
+            self.register_new_device("switch", new_device, hidden)
         else:
             LOGGER.info("unknown chnanel type %s - ignoring", channel_type)
             return
@@ -448,26 +453,26 @@ class DynaliteDevices:
         if action == CONF_ACTION_REPORT:
             actual_level = (255 - event.data[CONF_ACT_LEVEL]) / 254
             target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
-            channelToSet = self.added_channels[area][channel]
-            channelToSet.update_level(actual_level, target_level)
-            self.updateDevice(channelToSet)
+            channel_to_set = self.added_channels[area][channel]
+            channel_to_set.update_level(actual_level, target_level)
+            self.update_device(channel_to_set)
         elif action == CONF_ACTION_CMD:
             target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
             # when there is only a "set channel level" command, assume that this is both the actual and the target
             actual_level = target_level
-            channelToSet = self.added_channels[area][channel]
-            channelToSet.update_level(actual_level, target_level)
-            self.updateDevice(channelToSet)
+            channel_to_set = self.added_channels[area][channel]
+            channel_to_set.update_level(actual_level, target_level)
+            self.update_device(channel_to_set)
         elif action == CONF_ACTION_STOP:
             if channel == CONF_ALL:
                 for channel in self.added_channels.get(area, {}):
-                    channelToSet = self.added_channels[area][channel]
-                    channelToSet.stop_fade()
-                    self.updateDevice(channelToSet)
+                    channel_to_set = self.added_channels[area][channel]
+                    channel_to_set.stop_fade()
+                    self.update_device(channel_to_set)
             else:
-                channelToSet = self.added_channels[area][channel]
-                channelToSet.stop_fade()
-                self.updateDevice(channelToSet)
+                channel_to_set = self.added_channels[area][channel]
+                channel_to_set.stop_fade()
+                self.update_device(channel_to_set)
         else:
             LOGGER.error("unknown action for channel change %s", action)
 
@@ -525,11 +530,11 @@ class DynaliteDevices:
         """Return the class for a blind."""
         return self.area[area][CONF_DEVICE_CLASS]
 
-    def getMasterArea(self, area):
+    def get_master_area(self, area):
         """Get the master area when combining entities from different Dynet areas to the same area."""
         if area not in self.area:
-            LOGGER.error("getMasterArea - we should not get here")
-            raise BridgeError("getMasterArea - area " + str(area) + "is not in config")
+            LOGGER.error("get_master_area - we should not get here")
+            raise BridgeError(f"get_master_area - area {area} is not in config")
         area_config = self.area[area]
         master_area = area_config[CONF_NAME]
         if CONF_AREA_OVERRIDE in area_config:

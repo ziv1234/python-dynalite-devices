@@ -27,14 +27,15 @@ from .const import (
 from .event import DynetEvent
 
 
-class DynetInbound(object):
+class DynetInbound:
     """Class to handle inboud Dynet packets."""
 
     def __init__(self):
         """Initialize the object."""
         self._logger = None
 
-    def preset(self, packet):
+    @staticmethod
+    def preset(packet):
         """Handle a preset that was selected."""
         if packet.command > 3:
             packet.preset = packet.command - 6
@@ -43,7 +44,7 @@ class DynetInbound(object):
         packet.preset = (packet.preset + (packet.data[2] * 8)) + 1
         packet.fade = (packet.data[0] + (packet.data[1] * 256)) * 0.02
         return DynetEvent(
-            eventType=EVENT_PRESET,
+            event_type=EVENT_PRESET,
             message=(
                 "Area %d Preset %d Fade %d seconds."
                 % (packet.area, packet.preset, packet.fade)
@@ -88,11 +89,12 @@ class DynetInbound(object):
         """Handle preset 8 in banks of 8."""
         return self.preset(packet)
 
-    def report_preset(self, packet):
+    @staticmethod
+    def report_preset(packet):
         """Report the current preset of an area."""
         packet.preset = packet.data[0] + 1
         return DynetEvent(
-            eventType=EVENT_PRESET,
+            event_type=EVENT_PRESET,
             message=("Current Area %d Preset is %d" % (packet.area, packet.preset)),
             data={
                 CONF_AREA: packet.area,
@@ -101,12 +103,13 @@ class DynetInbound(object):
             },
         )
 
-    def linear_preset(self, packet):
+    @staticmethod
+    def linear_preset(packet):
         """Report that preset was selected with fade."""
         packet.preset = packet.data[0] + 1
         packet.fade = (packet.data[1] + (packet.data[2] * 256)) * 0.02
         return DynetEvent(
-            eventType=EVENT_PRESET,
+            event_type=EVENT_PRESET,
             message=(
                 "Area %d Preset %d Fade %d seconds."
                 % (packet.area, packet.preset, packet.fade)
@@ -119,13 +122,14 @@ class DynetInbound(object):
             },
         )
 
-    def report_channel_level(self, packet):
+    @staticmethod
+    def report_channel_level(packet):
         """Report the new level of a channel."""
         channel = packet.data[0] + 1
         target_level = packet.data[1]
         actual_level = packet.data[2]
         return DynetEvent(
-            eventType=EVENT_CHANNEL,
+            event_type=EVENT_CHANNEL,
             message=(
                 "Area %d Channel %d Target Level %d Actual Level %d."
                 % (packet.area, channel, target_level, actual_level)
@@ -140,12 +144,13 @@ class DynetInbound(object):
             },
         )
 
-    def set_channel_x_to_level_with_fade(self, packet, channel_offset):
+    @staticmethod
+    def set_channel_x_to_level_with_fade(packet, channel_offset):
         """Report that a channel was set to a specific level."""
         channel = ((packet.data[1] + 1) % 256) * 4 + channel_offset
         target_level = packet.data[0]
         return DynetEvent(
-            eventType=EVENT_CHANNEL,
+            event_type=EVENT_CHANNEL,
             message=(
                 "Area %d Channel %d Target Level %d"
                 % (packet.area, channel, target_level)
@@ -175,17 +180,19 @@ class DynetInbound(object):
         """Report that channel 4 was set to a specific level."""
         return self.set_channel_x_to_level_with_fade(packet, 4)
 
-    def request_channel_level(self, packet):
+    @staticmethod
+    def request_channel_level(packet):
         """Do nothing."""
-        return
+        pass
 
-    def stop_fading(self, packet):
+    @staticmethod
+    def stop_fading(packet):
         """Report that fading stopped for a channel or area."""
         channel = packet.data[0] + 1
         if channel == 256:  # all channels in area
             channel = CONF_ALL
         return DynetEvent(
-            eventType=EVENT_CHANNEL,
+            event_type=EVENT_CHANNEL,
             message=("Area %d Channel %s" % (packet.area, channel)),
             data={
                 CONF_AREA: packet.area,
@@ -202,7 +209,7 @@ class DynetInbound(object):
     # packet.fade = packet.data[2] * 0.02
     # if channel == 256:  # all channels in area
     # return DynetEvent(
-    # eventType=EVENT_PRESET,
+    # event_type=EVENT_PRESET,
     # message=(
     # "Current Area %d Preset is %d fade %s"
     # % (packet.area, packet.preset, packet.fade)
@@ -216,7 +223,7 @@ class DynetInbound(object):
     # )
     # else:
     # return DynetEvent(
-    # eventType=EVENT_CHANNEL,
+    # event_type=EVENT_CHANNEL,
     # message=(
     # "Area %d Channel %s preset %s fade %s"
     # % (packet.area, channel, packet.preset, packet.fade)

@@ -19,14 +19,15 @@ class PacketError(Exception):
     def __init__(self, message):
         """Initialize the error."""
         self.message = message
+        super().__init__(message)
 
 
-class DynetPacket(object):
+class DynetPacket:
     """Class for a Dynet network packet."""
 
     def __init__(self, msg=None):
         """Initialize the packet."""
-        self.opcodeType = None
+        self.opcode_type = None
         self.sync = None
         self.area = None
         self.data = []
@@ -34,28 +35,28 @@ class DynetPacket(object):
         self.join = None
         self.chk = None
         if msg is not None:
-            self.fromMsg(msg)
+            self.from_msg(msg)
 
-    def toMsg(self, sync=SyncType.LOGICAL, area=0, command=0, data=[0, 0, 0], join=255):
+    def to_msg(self, area, command, data, sync=SyncType.LOGICAL.value, join=255):
         """Convert packet to a binary message."""
-        bytes = []
-        bytes.append(sync)
-        bytes.append(area)
-        bytes.append(data[0])
-        bytes.append(command)
-        bytes.append(data[1])
-        bytes.append(data[2])
-        bytes.append(join)
-        bytes.append(self.calcsum(bytes))
-        self.fromMsg(bytes)
+        my_bytes = []
+        my_bytes.append(sync)
+        my_bytes.append(area)
+        my_bytes.append(data[0])
+        my_bytes.append(command)
+        my_bytes.append(data[1])
+        my_bytes.append(data[2])
+        my_bytes.append(join)
+        my_bytes.append(self.calc_sum(my_bytes))
+        self.from_msg(my_bytes)
 
-    def fromMsg(self, msg):
+    def from_msg(self, msg):
         """Decode a Dynet message."""
-        messageLength = len(msg)
-        if messageLength < 8:
-            raise PacketError("Message too short (%d bytes): %s" % (len(msg), msg))
-        if messageLength > 8:
-            raise PacketError("Message too long (%d bytes): %s" % (len(msg), msg))
+        message_length = len(msg)
+        if message_length < 8:
+            raise PacketError(f"Message too short ({len(msg)} bytes): {msg}")
+        if message_length > 8:
+            raise PacketError(f"Message too long ({len(msg)} bytes): {msg}")
         self._msg = msg
         self.sync = self._msg[0]
         self.area = self._msg[1]
@@ -65,13 +66,10 @@ class DynetPacket(object):
         self.chk = self._msg[7]
         if self.sync == 28:
             if OpcodeType.has_value(self.command):
-                self.opcodeType = OpcodeType(self.command).name
+                self.opcode_type = OpcodeType(self.command).name
 
-    def toJson(self):
-        """Convert to JSON."""
-        return json.dumps(self.__dict__)
-
-    def calcsum(self, msg):
+    @staticmethod
+    def calc_sum(msg):
         """Calculate the checksum."""
         msg = msg[:7]
         return -(sum(ord(c) for c in "".join(map(chr, msg))) % 256) & 0xFF
@@ -80,6 +78,7 @@ class DynetPacket(object):
         """Print the packet."""
         return json.dumps(self.__dict__)
 
+    @staticmethod
     def set_channel_level_packet(area, channel, level, fade):
         """Create a packet to set level of a channel."""
         channel_bank = 0xFF if (channel <= 4) else (int((channel - 1) / 4) - 1)
@@ -89,15 +88,12 @@ class DynetPacket(object):
         if (fade_time) > 0xFF:
             fade_time = 0xFF
         packet = DynetPacket()
-        packet.toMsg(
-            sync=28,
-            area=area,
-            command=opcode,
-            data=[target_level, channel_bank, fade_time],
-            join=255,
+        packet.to_msg(
+            area=area, command=opcode, data=[target_level, channel_bank, fade_time],
         )
         return packet
 
+    @staticmethod
     def select_area_preset_packet(area, preset, fade):
         """Create a packet to select a preset in an area."""
         preset = preset - 1
@@ -105,46 +101,39 @@ class DynetPacket(object):
         opcode = preset - (bank * 8)
         if opcode > 3:
             opcode = opcode + 6
-        fadeLow = int(fade / 0.02) - (int((fade / 0.02) / 256) * 256)
-        fadeHigh = int((fade / 0.02) / 256)
+        fade_low = int(fade / 0.02) - (int((fade / 0.02) / 256) * 256)
+        fade_high = int((fade / 0.02) / 256)
         packet = DynetPacket()
-        packet.toMsg(
-            sync=28, area=area, command=opcode, data=[fadeLow, fadeHigh, bank], join=255
+        packet.to_msg(
+            area=area, command=opcode, data=[fade_low, fade_high, bank],
         )
         return packet
 
+    @staticmethod
     def request_channel_level_packet(area, channel):
         """Create a packet to request the level of a specific channel."""
         packet = DynetPacket()
-        packet.toMsg(
-            sync=28,
+        packet.to_msg(
             area=area,
             command=OpcodeType.REQUEST_CHANNEL_LEVEL.value,
             data=[channel - 1, 0, 0],
-            join=255,
         )
         return packet
 
+    @staticmethod
     def stop_channel_fade_packet(area, channel):
         """Create a packet to stop fade of a channel."""
         packet = DynetPacket()
-        packet.toMsg(
-            sync=28,
-            area=area,
-            command=OpcodeType.STOP_FADING.value,
-            data=[channel - 1, 0, 0],
-            join=255,
+        packet.to_msg(
+            area=area, command=OpcodeType.STOP_FADING.value, data=[channel - 1, 0, 0],
         )
         return packet
 
+    @staticmethod
     def request_area_preset_packet(area):
         """Create a packet to request the current preset in an area."""
         packet = DynetPacket()
-        packet.toMsg(
-            sync=28,
-            area=area,
-            command=OpcodeType.REQUEST_PRESET.value,
-            data=[0, 0, 0],
-            join=255,
+        packet.to_msg(
+            area=area, command=OpcodeType.REQUEST_PRESET.value, data=[0, 0, 0],
         )
         return packet

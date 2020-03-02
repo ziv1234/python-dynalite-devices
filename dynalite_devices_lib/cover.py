@@ -46,14 +46,15 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
 
     def timer_callback(self):
         """Update the progress of open and close."""
+        duration = self._bridge.get_cover_duration(self._area)
         if self._direction == "open":
-            self._current_position += 1.0 / self._duration
+            self._current_position += 1.0 / duration
             if self._current_position >= 1.0:
                 self._current_position = 1.0
                 self._direction = "stop"
                 self._bridge.remove_timer_listener(self.timer_callback)
         elif self._direction == "close":
-            self._current_position -= 1.0 / self._duration
+            self._current_position -= 1.0 / duration
             if self._current_position <= 0.0:
                 self._current_position = 0.0
                 self._direction = "stop"
@@ -62,6 +63,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
             self._bridge.remove_timer_listener(self.timer_callback)
 
         if getattr(self, "update_tilt", False):
+            # pylint: disable=no-member
             self.update_tilt()
 
         self._bridge.updateDevice(self)
@@ -176,7 +178,8 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
                 "update_tilt called with invalid direction %s", self._direction
             )
             return
-        tilt_diff = mult / self._tilt_duration
+        tilt_duration = self._bridge.get_cover_tilt_duration(self._area)
+        tilt_diff = mult / tilt_duration
         self._current_tilt = max(0, min(1, self._current_tilt + tilt_diff))
 
     @property
@@ -186,7 +189,9 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
 
     async def apply_tilt_diff(self, tilt_diff):
         """Move the cover up or down based on a diff."""
-        factor = self._tilt_duration / self._duration
+        duration = self._bridge.get_cover_duration(self._area)
+        tilt_duration = self._bridge.get_cover_tilt_duration(self._area)
+        factor = tilt_duration / duration
         position_diff = tilt_diff * factor
         target_position = int(
             100 * max(0, min(1, self._current_position + position_diff))
@@ -197,15 +202,13 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
         """Open the cover tilt."""
         if self._current_tilt == 1:
             return
-        else:
-            await self.apply_tilt_diff(1 - self._current_tilt)
+        await self.apply_tilt_diff(1 - self._current_tilt)
 
     async def async_close_cover_tilt(self, **kwargs):
         """Close the cover tilt."""
         if self._current_tilt == 0:
             return
-        else:
-            await self.apply_tilt_diff(0 - self._current_tilt)
+        await self.apply_tilt_diff(0 - self._current_tilt)
 
     async def async_set_cover_tilt_position(self, **kwargs):
         """Set the cover tilt position."""

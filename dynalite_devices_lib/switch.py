@@ -31,11 +31,13 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
 
     async def async_turn_on(self, **kwargs):
         """Turn switch on."""
-        self._device.turnOn()
+        fade = self._bridge.get_channel_fade(self._area, self._channel)
+        self._bridge.set_channel_level(self._area, self._channel, 1, fade)
 
     async def async_turn_off(self, **kwargs):
         """Turn switch off."""
-        self._device.turnOff()
+        fade = self._bridge.get_channel_fade(self._area, self._channel)
+        self._bridge.set_channel_level(self._area, self._channel, 0, fade)
 
 
 class DynalitePresetSwitchDevice(DynaliteBaseDevice):
