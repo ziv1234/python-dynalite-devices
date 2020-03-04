@@ -172,6 +172,9 @@ class DynaliteDevices:
                     CONF_FADE: channel_config.get(
                         CONF_FADE, self.area[area][CONF_FADE]
                     ),
+                    CONF_CHANNEL_TYPE: channel_config.get(
+                        CONF_CHANNEL_TYPE, DEFAULT_CHANNEL_TYPE
+                    ),
                 }
             # add the entities implicitly defined by templates
             template = area_config.get(CONF_TEMPLATE)
