@@ -6,7 +6,7 @@ repos:
         args:
           - --safe
           - --quiet
-        files: ^((dynalite_devices_lib|script|tests)/.+)?[^/]+\.py$
+        files: ^(dynalite_devices_lib|tests)/.+\.py$
   - repo: https://github.com/codespell-project/codespell
     rev: v1.16.0
     hooks:

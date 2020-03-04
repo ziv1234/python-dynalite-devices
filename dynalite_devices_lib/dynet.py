@@ -39,7 +39,7 @@ class DynetPacket:
 
     def to_msg(self, area, command, data, sync=SyncType.LOGICAL.value, join=255):
         """Convert packet to a binary message."""
-        my_bytes = []
+        my_bytes = bytearray()
         my_bytes.append(sync)
         my_bytes.append(area)
         my_bytes.append(data[0])
@@ -57,13 +57,13 @@ class DynetPacket:
             raise PacketError(f"Message too short ({len(msg)} bytes): {msg}")
         if message_length > 8:
             raise PacketError(f"Message too long ({len(msg)} bytes): {msg}")
-        self._msg = msg
-        self.sync = self._msg[0]
-        self.area = self._msg[1]
-        self.data = [self._msg[2], self._msg[4], self._msg[5]]
-        self.command = self._msg[3]
-        self.join = self._msg[6]
-        self.chk = self._msg[7]
+        self.msg = msg
+        self.sync = self.msg[0]
+        self.area = self.msg[1]
+        self.data = [self.msg[2], self.msg[4], self.msg[5]]
+        self.command = self.msg[3]
+        self.join = self.msg[6]
+        self.chk = self.msg[7]
         if self.sync == 28:
             if OpcodeType.has_value(self.command):
                 self.opcode_type = OpcodeType(self.command).name

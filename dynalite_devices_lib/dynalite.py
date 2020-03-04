@@ -42,16 +42,16 @@ class Dynalite:
         self._in_buffer = []
         self._out_buffer = []
         self._last_sent = None
-        self._message_delay = 200
+        self.message_delay = 200
         self._sending = False
-        self._reader = None
-        self._writer = None
+        self.reader = None
+        self.writer = None
         self.resetting = False
 
     async def connect_internal(self):
         """Create the actual connection to Dynet."""
         try:
-            self._reader, self._writer = await asyncio.open_connection(
+            self.reader, self.writer = await asyncio.open_connection(
                 self.host, self.port
             )
             return True
@@ -70,6 +70,7 @@ class Dynalite:
         result = await self.connect_internal()
         if result and not self.resetting:
             self.loop.create_task(self.reader_loop())
+            self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
         return result
 
     async def reader_loop(self):
@@ -77,7 +78,7 @@ class Dynalite:
         while True:
             self.write()  # write if there is something in the buffers
             try:
-                data = await self._reader.read(100)
+                data = await self.reader.read(100)
                 if len(data) > 0:
                     self.receive(data)
                     continue
@@ -85,15 +86,15 @@ class Dynalite:
                 pass
             # we got disconnected or EOF
             if self.resetting:
-                self._reader = None
+                self.reader = None
                 return  # stop loop
-            self._reader = None
-            self._writer = None
+            self.reader = None
+            self.writer = None
             self.broadcast(DynetEvent(event_type=EVENT_DISCONNECTED, data={}))
             await asyncio.sleep(1)  # Don't overload the network
             while not await self.connect_internal():
                 if self.resetting:
-                    self._reader = None
+                    self.reader = None
                     return  # stop loop
                 await asyncio.sleep(1)  # Don't overload the network
             self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
@@ -202,21 +203,22 @@ class Dynalite:
         """Write a packet or trigger write loop."""
         if new_packet is not None:
             self._out_buffer.append(new_packet)
-        if self._writer is None:
+        if self.writer is None:
             LOGGER.debug("write before transport is ready. queuing")
             return
-        if self._sending:
-            LOGGER.debug("Connection busy - queuing packet")
-            self.loop.call_later(1, self.write)
-            return
-        if self._last_sent is None:
-            self._last_sent = int(round(time.time() * 1000))
-        current_milli_time = int(round(time.time() * 1000))
-        elapsed = current_milli_time - self._last_sent
-        delay = 0 - (elapsed - self._message_delay)
-        if delay > 0:
-            self.loop.call_later(delay / 1000, self.write)
-            return
+        if self.message_delay > 0:  # in testing it is set to 0
+            if self._sending:
+                LOGGER.debug("Connection busy - queuing packet")
+                self.loop.call_later(1, self.write)
+                return
+            if self._last_sent is None:
+                self._last_sent = int(round(time.time() * 1000))
+            current_milli_time = int(round(time.time() * 1000))
+            elapsed = current_milli_time - self._last_sent
+            delay = 0 - (elapsed - self.message_delay)
+            if delay > 0:
+                self.loop.call_later(delay / 1000, self.write)
+                return
         if len(self._out_buffer) == 0:
             return
         packet = self._out_buffer[0]
@@ -230,22 +232,22 @@ class Dynalite:
         msg.append(packet.data[2])
         msg.append(packet.join)
         msg.append(packet.chk)
-        self._writer.write(msg)
+        self.writer.write(msg)
         LOGGER.debug("Dynet Sent: %s", msg)
         self._last_sent = int(round(time.time() * 1000))
         self._sending = False
         del self._out_buffer[0]
         if len(self._out_buffer) > 0:
-            self.loop.call_later(self._message_delay / 1000, self.write)
+            self.loop.call_later(self.message_delay / 1000, self.write)
 
     async def async_reset(self):
         """Close sockets and timers."""
         self.resetting = True
         # Wait for reader to also close
-        while self._reader:
-            if self._writer:
-                temp_writer = self._writer
-                self._writer = None
+        while self.reader:
+            if self.writer:
+                temp_writer = self.writer
+                self.writer = None
                 temp_writer.close()
                 await temp_writer.wait_closed()
             await asyncio.sleep(1)

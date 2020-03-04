@@ -99,7 +99,7 @@ class DynaliteDevices:
         self.timer_callbacks = set()
         self.template = {}
         self.area = {}
-        self._dynalite = Dynalite(broadcast_func=self.handle_event)
+        self.dynalite = Dynalite(broadcast_func=self.handle_event)
         self.resetting = False
 
     async def async_setup(self):
@@ -109,7 +109,7 @@ class DynaliteDevices:
             self.loop = asyncio.get_running_loop()
         # Run the dynalite object. Assumes self.configure() has been called
         self.resetting = False
-        self.connected = await self._dynalite.connect(self.host, self.port)
+        self.connected = await self.dynalite.connect(self.host, self.port)
         return self.connected
 
     def configure(self, config):
@@ -117,7 +117,7 @@ class DynaliteDevices:
         LOGGER.debug("bridge async_configure - %s", config)
         self.configured = False
         # insert the global values
-        self.host = config[CONF_HOST]
+        self.host = config.get(CONF_HOST, "HOST")  # Default value for testing
         self.port = config.get(CONF_PORT, DEFAULT_PORT)
         self.name = config.get(CONF_NAME, f"{DEFAULT_NAME}-{self.host}")
         self.auto_discover = config.get(CONF_AUTO_DISCOVER, False)
@@ -221,11 +221,11 @@ class DynaliteDevices:
             self.area[area][CONF_CHANNEL] = area_channels
             # now register the channels and presets and ask for initial status if needed
             if self.active in [CONF_ACTIVE_INIT, CONF_ACTIVE_ON]:
-                self._dynalite.request_area_preset(area)
+                self.dynalite.request_area_preset(area)
             for channel in area_channels:
                 self.create_channel_if_new(area, channel)
                 if self.active in [CONF_ACTIVE_INIT, CONF_ACTIVE_ON]:
-                    self._dynalite.request_channel_level(area, channel)
+                    self.dynalite.request_channel_level(area, channel)
             for preset in area_presets:
                 self.create_preset_if_new(area, preset)
 
@@ -389,7 +389,7 @@ class DynaliteDevices:
         # If active is set to full, query all channels in the area
         if self.active == CONF_ACTIVE_ON:
             for channel in self.area[area].get(CONF_CHANNEL, {}):
-                self._dynalite.request_channel_level(area, channel)
+                self.dynalite.request_channel_level(area, channel)
 
     def create_channel_if_new(self, area, channel):
         """Register a new channel."""
@@ -498,12 +498,16 @@ class DynaliteDevices:
     def set_channel_level(self, area, channel, level, fade):
         """Set the level for a channel."""
         fade = self.area[area][CONF_CHANNEL][channel][CONF_FADE]
-        self._dynalite.set_channel_level(area, channel, level, fade)
+        self.dynalite.set_channel_level(area, channel, level, fade)
 
     def select_preset(self, area, preset):
         """Select a preset in an area."""
         fade = self.area[area][CONF_PRESET][preset][CONF_FADE]
-        self._dynalite.select_preset(area, preset, fade)
+        self.dynalite.select_preset(area, preset, fade)
+
+    def get_area_name(self, area):
+        """Return the name of an area."""
+        return self.area[area][CONF_NAME]
 
     def get_channel_name(self, area, channel):
         """Return the name of a channel."""
@@ -552,6 +556,6 @@ class DynaliteDevices:
     async def async_reset(self):
         """Reset the connections and timers."""
         self.resetting = True
-        await self._dynalite.async_reset()
+        await self.dynalite.async_reset()
         while self.timer_active:
             await asyncio.sleep(1)

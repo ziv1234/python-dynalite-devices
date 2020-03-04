@@ -23,7 +23,7 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
     @property
     def get_master_area(self):
         """Get the master area when combining entities from different Dynet areas to the same area."""
-        return self._bridge.getMasterArea(self._area)
+        return self._bridge.get_master_area(self._area)
 
     def add_listener(self, listener):
         """Add a listener for changes."""
