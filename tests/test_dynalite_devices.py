@@ -23,7 +23,7 @@ async def test_dynalite_devices_channel(mock_gw):
     channel_name = "CHANNEL"
     mock_gw.dyn_dev.configure(
         {
-            dyn_const.CONF_ACTIVE: dyn_const.CONF_ACTIVE_ON,
+            dyn_const.CONF_ACTIVE: True,
             dyn_const.CONF_AREA: {
                 "1": {
                     dyn_const.CONF_NAME: name,
@@ -40,18 +40,3 @@ async def test_dynalite_devices_channel(mock_gw):
             dyn_dynet.DynetPacket.request_area_preset_packet(1),
         ]
     )
-
-
-# def func(): XXX
-# pass
-
-# async def async_func():
-# pass
-
-# async def test_wait():
-# import asyncio
-# loop = asyncio.get_event_loop()
-# loop.call_soon(func)
-# # loop.create_task(async_func())
-# dyn_const.LOGGER.error("XXX EEE %s", asyncio.all_tasks())
-# assert False

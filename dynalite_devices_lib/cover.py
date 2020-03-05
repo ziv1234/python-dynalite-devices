@@ -60,8 +60,6 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
                 self._current_position = 0.0
                 self._direction = "stop"
                 self._bridge.remove_timer_listener(self.timer_callback)
-        elif self._direction == "stop":
-            self._bridge.remove_timer_listener(self.timer_callback)
 
         if getattr(self, "update_tilt", False):
             # pylint: disable=no-member
@@ -135,13 +133,13 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     def listener(self, device, stop_fade):
         """Update according to updates in underlying devices."""
         if device == self.get_device(1):
-            if device.level > 0:
+            if device.is_on:
                 self.update_level(self._current_position, 1.0)
         elif device == self.get_device(2):
-            if device.level > 0:
+            if device.is_on:
                 self.update_level(self._current_position, 0.0)
         elif device == self.get_device(3):
-            if device.level > 0:
+            if device.is_on:
                 self.update_level(self._current_position, self._current_position)
         elif device == self.get_device(4):
             if stop_fade or device.direction == "stop":
@@ -150,9 +148,6 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
                 self.update_level(self._current_position, 1.0)
             else:
                 self.update_level(self._current_position, 0.0)
-
-        else:
-            LOGGER.error("listener received update from unknown device")
         super().listener(device, stop_fade)
 
 

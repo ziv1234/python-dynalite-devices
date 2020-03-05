@@ -64,11 +64,6 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
         """Return the ID of this cover."""
         return "dynalite_area_" + str(self._area) + "_preset_" + str(self._preset)
 
-    @property
-    def level(self):
-        """Return the current level."""
-        return self._level
-
     def set_level(self, level):
         """Set the current level and potentially trigger listeners."""
         old_level = self._level
@@ -83,7 +78,8 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
 
     async def async_turn_on(self, **kwargs):
         """Turn switch on."""
-        self._bridge.select_preset(self._area, self._preset)
+        fade = self._bridge.get_preset_fade(self._area, self._preset)
+        self._bridge.select_preset(self._area, self._preset, fade)
 
     async def async_turn_off(self, **kwargs):
         """Turn switch off - doesn't do anything for presets."""
