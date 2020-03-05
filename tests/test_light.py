@@ -1,7 +1,5 @@
-"""Tests for DynaliteDevices."""
-import asyncio
+"""Tests for Dynalite lights."""
 
-from asynctest import call
 import dynalite_devices_lib.const as dyn_const
 import dynalite_devices_lib.dynet as dyn_dynet
 
@@ -27,41 +25,25 @@ async def test_light(mock_gw):
             },
         }
     )
-    await mock_gw.async_setup()
-    await asyncio.sleep(0.1)
-    mock_gw.new_dev_func.assert_called_once()
-    assert len(mock_gw.new_dev_func.mock_calls[0][1][0]) == 1
-    device = mock_gw.new_dev_func.mock_calls[0][1][0][0]
+    [device] = await mock_gw.async_setup()
     assert device.category == "light"
     assert device.name == f"{name} {channel_name}"
     assert device.unique_id == "dynalite_area_1_channel_1"
-    dyn_const.LOGGER.error("XXX QQQ %s", device.available)
     assert device.available
     assert device.area_name == name
     assert device.get_master_area == name
     await device.async_turn_on()
-    await asyncio.sleep(0.1)
-    mock_gw.mock_writer.write.assert_called_once()
-    assert (
-        call.write(dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5).msg)
-        in mock_gw.mock_writer.mock_calls
+    await mock_gw.check_single_write(
+        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     )
     assert device.brightness == 255
-    mock_gw.mock_writer.reset_mock()
     await device.async_turn_on(brightness=51)
-    await asyncio.sleep(0.1)
-    mock_gw.mock_writer.write.assert_called_once()
-    assert (
-        call.write(dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5).msg)
-        in mock_gw.mock_writer.mock_calls
+    await mock_gw.check_single_write(
+        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5)
     )
     assert device.brightness == 51
-    mock_gw.mock_writer.reset_mock()
     await device.async_turn_off()
-    await asyncio.sleep(0.1)
-    mock_gw.mock_writer.write.assert_called_once()
-    assert (
-        call.write(dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0, 0.5).msg)
-        in mock_gw.mock_writer.mock_calls
+    await mock_gw.check_single_write(
+        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0, 0.5)
     )
     assert device.brightness == 0

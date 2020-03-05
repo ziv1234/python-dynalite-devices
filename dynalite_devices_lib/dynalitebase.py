@@ -89,8 +89,8 @@ class DynaliteMultiDevice(DynaliteBaseDevice):
         self._devices[devnum] = device
         device.add_listener(self.listener)
         if self.available:
-            self._bridge.updateDevice(self)
+            self._bridge.update_device(self)
 
     def listener(self, device, stop_fade):
         """Update the device since its internal devices changed."""
-        self._bridge.updateDevice(self)
+        self._bridge.update_device(self)

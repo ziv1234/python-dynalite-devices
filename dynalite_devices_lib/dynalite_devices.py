@@ -190,7 +190,6 @@ class DynaliteDevices:
                 ]
                 conf_values = [CONF_DEVICE_CLASS, CONF_DURATION, CONF_TILT_TIME]
                 conf_channels = [CONF_CHANNEL_COVER]
-
                 for conf in self.template[template]:
                     conf_value = area_config.get(conf, self.template[template][conf])
                     if conf in conf_presets:
@@ -215,6 +214,7 @@ class DynaliteDevices:
                     else:
                         assert conf in conf_values
                         self.area[area][conf] = conf_value
+                area_config[CONF_NO_DEFAULT] = True
             # Default presets
             if not area_config.get(CONF_NO_DEFAULT, False):
                 for preset in default_presets:
@@ -482,7 +482,7 @@ class DynaliteDevices:
         """Add a listener to the timer and start if needed."""
         self.timer_callbacks.add(callback_func)
         if not self.timer_active:
-            self.loop.call_later(1, self.timer_func)
+            self.loop.call_later(self.poll_timer, self.timer_func)
             self.timer_active = True
 
     def remove_timer_listener(self, callback_func):
@@ -494,7 +494,7 @@ class DynaliteDevices:
         if self.timer_callbacks and not self.resetting:
             for callback in self.timer_callbacks:
                 self.loop.call_soon(callback)
-            self.loop.call_later(1, self.timer_func)
+            self.loop.call_later(self.poll_timer, self.timer_func)
         else:
             self.timer_active = False
 
