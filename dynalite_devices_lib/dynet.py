@@ -137,3 +137,27 @@ class DynetPacket:
             area=area, command=OpcodeType.REQUEST_PRESET.value, data=[0, 0, 0],
         )
         return packet
+
+    @staticmethod
+    def report_channel_level_packet(area, channel, target_level, actual_level):
+        """Create a packet that reports the level of a channel."""
+        packet = DynetPacket()
+        packet.to_msg(
+            area=area,
+            command=OpcodeType.REPORT_CHANNEL_LEVEL.value,
+            data=[
+                channel - 1,
+                int(255 - 254 * target_level),
+                int(255 - 254 * actual_level),
+            ],
+        )
+        return packet
+
+    @staticmethod
+    def report_area_preset_packet(area, preset):
+        """Create a packet that reports the current preset in an area."""
+        packet = DynetPacket()
+        packet.to_msg(
+            area=area, command=OpcodeType.REPORT_PRESET.value, data=[preset - 1, 0, 0],
+        )
+        return packet

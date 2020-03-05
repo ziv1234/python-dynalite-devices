@@ -51,6 +51,12 @@ async def test_preset_switch(mock_gw):
     mock_gw.mock_writer.write.assert_not_called()
     assert not device4.is_on
     assert not device1.is_on
+    await mock_gw.receive(dyn_dynet.DynetPacket.select_area_preset_packet(1, 1, 0.2))
+    assert not device4.is_on
+    assert device1.is_on
+    await mock_gw.receive(dyn_dynet.DynetPacket.report_area_preset_packet(1, 4))
+    assert device4.is_on
+    assert not device1.is_on
 
 
 async def test_channel_switch(mock_gw):

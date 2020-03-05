@@ -47,3 +47,17 @@ async def test_light(mock_gw):
         dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0, 0.5)
     )
     assert device.brightness == 0
+    # Now send commands
+    await mock_gw.receive(
+        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+    )
+    assert device.brightness == 255
+    assert device.is_on
+    await mock_gw.receive(
+        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5)
+    )
+    assert device.brightness == 51
+    assert device.is_on
+    await mock_gw.receive(dyn_dynet.DynetPacket.report_channel_level_packet(1, 1, 0, 0))
+    assert device.brightness == 0
+    assert not device.is_on

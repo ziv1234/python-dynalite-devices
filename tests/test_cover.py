@@ -107,6 +107,28 @@ async def test_cover_no_tilt(mock_gw):
         and not cover_device.is_closing
     )
     assert 40 < cover_device.current_cover_position < 60
+    await cover_device.async_set_cover_position(position=25)
+    await asyncio.sleep(0.1)
+    assert (
+        not cover_device.is_closed
+        and not cover_device.is_opening
+        and not cover_device.is_closing
+    )
+    assert 15 < cover_device.current_cover_position < 35
+    # Now send commands
+    await mock_gw.receive(dyn_dynet.DynetPacket.report_area_preset_packet(1, 1))
+    assert cover_device.is_opening
+    await mock_gw.receive(dyn_dynet.DynetPacket.report_area_preset_packet(1, 2))
+    assert cover_device.is_closing
+    await mock_gw.receive(dyn_dynet.DynetPacket.report_area_preset_packet(1, 3))
+    assert not cover_device.is_closing and not cover_device.is_opening
+    await mock_gw.receive(dyn_dynet.DynetPacket.report_area_preset_packet(1, 1))
+    await asyncio.sleep(0.5)
+    await mock_gw.receive(dyn_dynet.DynetPacket.report_channel_level_packet(1, 4, 0, 1))
+    assert cover_device.is_closing
+    await asyncio.sleep(0.5)
+    await mock_gw.receive(dyn_dynet.DynetPacket.report_channel_level_packet(1, 4, 1, 0))
+    assert cover_device.is_opening
 
 
 async def test_cover_with_tilt(mock_gw):

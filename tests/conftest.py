@@ -58,6 +58,11 @@ class MockDynDev:
         """Check that there was only a single write issued."""
         await self.check_writes([packet])
 
+    async def receive(self, packet):
+        """Fake a received packet."""
+        self.dyn_dev.dynalite.receive(packet.msg)
+        await asyncio.sleep(0.1)
+
 
 @pytest.fixture
 def mock_gw():
