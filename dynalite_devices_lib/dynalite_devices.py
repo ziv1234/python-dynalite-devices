@@ -117,7 +117,7 @@ class DynaliteDevices:
         LOGGER.debug("bridge async_configure - %s", config)
         self.configured = False
         # insert the global values
-        self.host = config.get(CONF_HOST, "HOST")  # Default value for testing
+        self.host = config.get(CONF_HOST, "localhost")  # Default value for testing
         self.port = config.get(CONF_PORT, DEFAULT_PORT)
         self.name = config.get(CONF_NAME, f"{DEFAULT_NAME}-{self.host}")
         self.auto_discover = config.get(CONF_AUTO_DISCOVER, False)

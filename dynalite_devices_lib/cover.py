@@ -50,21 +50,18 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         poll_timer = self._bridge.poll_timer
         if self._direction == "open":
             self._current_position += poll_timer / duration
+            getattr(self, "update_tilt", int)(poll_timer)
             if self._current_position >= 1.0:
                 self._current_position = 1.0
                 self._direction = "stop"
                 self._bridge.remove_timer_listener(self.timer_callback)
         elif self._direction == "close":
             self._current_position -= poll_timer / duration
+            getattr(self, "update_tilt", int)(poll_timer)
             if self._current_position <= 0.0:
                 self._current_position = 0.0
                 self._direction = "stop"
                 self._bridge.remove_timer_listener(self.timer_callback)
-
-        if getattr(self, "update_tilt", False):
-            # pylint: disable=no-member
-            self.update_tilt(poll_timer)
-
         self._bridge.update_device(self)
 
     @property
@@ -102,7 +99,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         target_position = kwargs[ATTR_POSITION] / 100
         position_diff = target_position - self._current_position
         poll_timer = self._bridge.poll_timer
-        if position_diff > 0:
+        if position_diff > 0.001:
             await self.async_open_cover()
             while (
                 self._current_position < target_position and self._direction == "open"
@@ -112,7 +109,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
                 await self.async_stop_cover()
                 await asyncio.sleep(poll_timer)  # doing twice for safety
                 await self.async_stop_cover()
-        elif position_diff < 0:
+        elif position_diff < -0.001:
             await self.async_close_cover()
             while (
                 self._current_position > target_position and self._direction == "close"

@@ -3,13 +3,16 @@ import asyncio
 
 import dynalite_devices_lib.const as dyn_const
 import dynalite_devices_lib.dynet as dyn_dynet
+import pytest
+
+pytestmark = pytest.mark.asyncio
 
 
-async def test_preset_switch(mock_gw):
+async def test_preset_switch(mock_gateway):
     """Test the dynalite devices library."""
     name = "NAME"
     preset_name = "PRESET"
-    mock_gw.dyn_dev.configure(
+    mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
             dyn_const.CONF_AREA: {
@@ -27,42 +30,44 @@ async def test_preset_switch(mock_gw):
             },
         }
     )
-    [device1, device4] = await mock_gw.async_setup(2)
+    [device1, device4] = await mock_gateway.async_setup_dyn_dev(2)
     assert device1.category == "switch"
     assert device4.category == "switch"
     assert device1.name == f"{name} {preset_name}"
     assert device4.name == f"{name} Preset 4"
     assert device1.unique_id == "dynalite_area_1_preset_1"
     await device1.async_turn_on()
-    await mock_gw.check_single_write(
+    await mock_gateway.check_single_write(
         dyn_dynet.DynetPacket.select_area_preset_packet(1, 1, 0.5)
     )
     assert device1.is_on
     assert not device4.is_on
     await device4.async_turn_on()
     await asyncio.sleep(0.1)
-    await mock_gw.check_single_write(
+    await mock_gateway.check_single_write(
         dyn_dynet.DynetPacket.select_area_preset_packet(1, 4, 0.7)
     )
     assert device4.is_on
     assert not device1.is_on
     await device4.async_turn_off()
     await asyncio.sleep(0.1)
-    mock_gw.mock_writer.write.assert_not_called()
+    await mock_gateway.check_writes([])
     assert not device4.is_on
     assert not device1.is_on
-    await mock_gw.receive(dyn_dynet.DynetPacket.select_area_preset_packet(1, 1, 0.2))
+    await mock_gateway.receive(
+        dyn_dynet.DynetPacket.select_area_preset_packet(1, 1, 0.2)
+    )
     assert not device4.is_on
     assert device1.is_on
-    await mock_gw.receive(dyn_dynet.DynetPacket.report_area_preset_packet(1, 4))
+    await mock_gateway.receive(dyn_dynet.DynetPacket.report_area_preset_packet(1, 4))
     assert device4.is_on
     assert not device1.is_on
 
 
-async def test_channel_switch(mock_gw):
+async def test_channel_switch(mock_gateway):
     """Test the dynalite devices library."""
     name = "NAME"
-    mock_gw.dyn_dev.configure(
+    mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
             dyn_const.CONF_AREA: {
@@ -79,7 +84,7 @@ async def test_channel_switch(mock_gw):
             },
         }
     )
-    [device] = await mock_gw.async_setup()
+    [device] = await mock_gateway.async_setup_dyn_dev()
     assert device.category == "switch"
     assert device.name == f"{name} Channel 1"
     assert device.unique_id == "dynalite_area_1_channel_1"
@@ -87,21 +92,21 @@ async def test_channel_switch(mock_gw):
     assert device.area_name == name
     assert device.get_master_area == name
     await device.async_turn_on()
-    await mock_gw.check_single_write(
+    await mock_gateway.check_single_write(
         dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     )
     assert device.is_on
     await device.async_turn_off()
-    await mock_gw.check_single_write(
+    await mock_gateway.check_single_write(
         dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0.0, 0.5)
     )
     assert not device.is_on
 
 
-async def test_room_switch(mock_gw):
+async def test_room_switch(mock_gateway):
     """Test the dynalite devices library."""
     name = "NAME"
-    mock_gw.dyn_dev.configure(
+    mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
             dyn_const.CONF_AREA: {
@@ -113,35 +118,35 @@ async def test_room_switch(mock_gw):
             },
         }
     )
-    [on_device, off_device, room_device] = await mock_gw.async_setup(3)
+    [on_device, off_device, room_device] = await mock_gateway.async_setup_dyn_dev(3)
     for device in [on_device, off_device, room_device]:
         assert device.category == "switch"
     assert room_device.name == name
     assert device.unique_id == "dynalite_area_1_room_switch"
     assert device.available
     await room_device.async_turn_on()
-    await mock_gw.check_single_write(
+    await mock_gateway.check_single_write(
         dyn_dynet.DynetPacket.select_area_preset_packet(1, 1, 0)
     )
     assert room_device.is_on
     assert on_device.is_on
     assert not off_device.is_on
     await room_device.async_turn_off()
-    await mock_gw.check_single_write(
+    await mock_gateway.check_single_write(
         dyn_dynet.DynetPacket.select_area_preset_packet(1, 4, 0)
     )
     assert not room_device.is_on
     assert not on_device.is_on
     assert off_device.is_on
     await on_device.async_turn_on()
-    await mock_gw.check_single_write(
+    await mock_gateway.check_single_write(
         dyn_dynet.DynetPacket.select_area_preset_packet(1, 1, 0)
     )
     assert room_device.is_on
     assert on_device.is_on
     assert not off_device.is_on
     await off_device.async_turn_on()
-    await mock_gw.check_single_write(
+    await mock_gateway.check_single_write(
         dyn_dynet.DynetPacket.select_area_preset_packet(1, 4, 0)
     )
     assert not room_device.is_on
