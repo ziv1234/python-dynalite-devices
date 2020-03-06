@@ -32,14 +32,14 @@ class MockGateway:
                 data = await reader.read(100)
                 addr = writer.get_extra_info("peername")
                 dyn_const.LOGGER.error(
-                    f"Received message from {addr!r} - %s", [int(byte) for byte in data]
+                    "Received message from %s - %s", addr, [int(byte) for byte in data]
                 )
                 for byte in data:
                     self.in_buffer.append(byte)
 
         self.server = await asyncio.start_server(handle_connection, "127.0.0.1", 12345)
         addr = self.server.sockets[0].getsockname()
-        dyn_const.LOGGER.error(f"Serving on {addr}")
+        dyn_const.LOGGER.error("Serving on %s", addr)
         async with self.server:
             await self.server.serve_forever()
 
