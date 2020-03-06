@@ -560,4 +560,4 @@ class DynaliteDevices:
         self.resetting = True
         await self.dynalite.async_reset()
         while self.timer_active:
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.1)

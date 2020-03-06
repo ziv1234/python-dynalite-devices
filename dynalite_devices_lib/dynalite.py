@@ -250,4 +250,4 @@ class Dynalite:
                 self.writer = None
                 temp_writer.close()
                 await temp_writer.wait_closed()
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.1)

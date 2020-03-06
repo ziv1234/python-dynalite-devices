@@ -114,9 +114,9 @@ async def mock_gateway(request):
     async def async_fin():
         """Shut the gateway down."""
         dyn_const.LOGGER.error("AAA - here")
-        # gateway.writer.close() XXX
         gateway.server.close()
         await gateway.server.wait_closed()
+        await gateway.dyn_dev.dyn_dev.async_reset()
 
     def fin():
         """Run shutdown async."""
