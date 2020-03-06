@@ -2,9 +2,10 @@
 
 import asyncio
 
+import pytest
+
 import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynet import DynetPacket
-import pytest
 
 pytestmark = pytest.mark.asyncio
 

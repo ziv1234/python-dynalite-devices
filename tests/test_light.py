@@ -1,7 +1,8 @@
 """Tests for Dynalite lights."""
+import pytest
+
 import dynalite_devices_lib.const as dyn_const
 import dynalite_devices_lib.dynet as dyn_dynet
-import pytest
 
 pytestmark = pytest.mark.asyncio
 

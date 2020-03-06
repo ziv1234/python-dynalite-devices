@@ -2,9 +2,10 @@
 import asyncio
 
 from asynctest import Mock
+import pytest
+
 import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynalite_devices import DynaliteDevices
-import pytest
 
 pytestmark = pytest.mark.asyncio
 

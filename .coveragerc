@@ -1,6 +1,6 @@
 [run]
-source = dynalite_devices_lib
-
+source = dynalite_devices_lib/
+data_file = /home/ziv/dyn_dev/.coverage
 omit =
 
 [report]
@@ -15,3 +15,6 @@ exclude_lines =
     # Don't complain if tests don't hit defensive assertion code:
     raise AssertionError
     raise NotImplementedError
+
+[html]
+directory = /home/ziv/cov_html
