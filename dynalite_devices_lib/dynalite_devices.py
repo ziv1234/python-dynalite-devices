@@ -147,6 +147,7 @@ class DynaliteDevices:
                 CONF_FADE: cur_config.get(CONF_FADE, self.default_fade),
             }
         # create the areas with their channels and presets
+        self.area = {}
         for area_val in config.get(CONF_AREA, {}):  # may be a string '123'
             area = int(area_val)
             area_config = config[CONF_AREA].get(area_val)
@@ -154,8 +155,9 @@ class DynaliteDevices:
                 CONF_NAME: area_config.get(CONF_NAME, f"Area {area}"),
                 CONF_FADE: area_config.get(CONF_FADE, self.default_fade),
             }
-            if CONF_TEMPLATE in area_config:
-                self.area[area][CONF_TEMPLATE] = area_config[CONF_TEMPLATE]
+            for conf in [CONF_TEMPLATE, CONF_AREA_OVERRIDE]:
+                if conf in area_config:
+                    self.area[area][conf] = area_config[conf]
             area_presets = {}
             area_channels = {}
             # User defined presets and channels first, then template presets, then defaults
@@ -298,10 +300,14 @@ class DynaliteDevices:
             else:  # send all the devices together when configured
                 self.waiting_devices.append(device)
 
-    @property
-    def available(self):
-        """Return whether bridge is available."""
-        return self.connected
+    def available(self, conf, area, item_num):
+        """Return whether a device on the bridge is available."""
+        if not self.connected:
+            return False
+        if conf in [CONF_CHANNEL, CONF_PRESET]:
+            return bool(self.area.get(area, {}).get(conf, {}).get(item_num, False))
+        assert conf == CONF_TEMPLATE
+        return self.area.get(area, {}).get(CONF_TEMPLATE, "") == item_num
 
     def update_device(self, device):
         """Update one or more devices."""
@@ -311,6 +317,12 @@ class DynaliteDevices:
     def handle_event(self, event=None):
         """Handle all events."""
         LOGGER.debug("handle_event - type=%s event=%s", event.event_type, event.data)
+        assert event.event_type in [
+            EVENT_CONNECTED,
+            EVENT_DISCONNECTED,
+            EVENT_PRESET,
+            EVENT_CHANNEL,
+        ]
         if event.event_type == EVENT_CONNECTED:
             LOGGER.debug("Received CONNECTED message")
             self.connected = True
@@ -325,10 +337,6 @@ class DynaliteDevices:
         elif event.event_type == EVENT_CHANNEL:
             LOGGER.debug("Received PRESET message")
             self.handle_channel_change(event)
-        else:
-            LOGGER.debug(
-                "Received unknown message type=%s data=%s", event.event_type, event.data
-            )
 
     def ensure_area(self, area):
         """Configure a default area if it is not yet in config."""
@@ -452,6 +460,7 @@ class DynaliteDevices:
             # Unknown and no autodiscover
             return
         action = event.data[CONF_ACTION]
+        assert action in [CONF_ACTION_REPORT, CONF_ACTION_CMD, CONF_ACTION_STOP]
         if action == CONF_ACTION_REPORT:
             actual_level = (255 - event.data[CONF_ACT_LEVEL]) / 254
             target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
@@ -475,8 +484,6 @@ class DynaliteDevices:
                 channel_to_set = self.added_channels[area][channel]
                 channel_to_set.stop_fade()
                 self.update_device(channel_to_set)
-        else:
-            LOGGER.error("unknown action for channel change %s", action)
 
     def add_timer_listener(self, callback_func):
         """Add a listener to the timer and start if needed."""
@@ -545,9 +552,7 @@ class DynaliteDevices:
 
     def get_master_area(self, area):
         """Get the master area when combining entities from different Dynet areas to the same area."""
-        if area not in self.area:
-            LOGGER.error("get_master_area - we should not get here")
-            raise BridgeError(f"get_master_area - area {area} is not in config")
+        assert area in self.area
         area_config = self.area[area]
         master_area = area_config[CONF_NAME]
         if CONF_AREA_OVERRIDE in area_config:

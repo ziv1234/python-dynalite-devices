@@ -37,6 +37,7 @@ class MockGateway:
                 )
                 for byte in data:
                     self.in_buffer.append(byte)
+            self.reader = self.writer = None
 
         self.server = await asyncio.start_server(handle_connection, "127.0.0.1", 12345)
         addr = self.server.sockets[0].getsockname()
@@ -80,6 +81,10 @@ class MockGateway:
         """Reset the in buffer."""
         self.in_buffer = bytearray()
 
+    def reset_connection(self):
+        """Reset the current connection."""
+        self.writer.close()
+
 
 class MockDynDev:
     """Class for a mock DynaliteDevices object."""
@@ -98,17 +103,17 @@ class MockDynDev:
         self.new_dev_func.reset_mock()
         if message_delay_zero:
             self.dyn_dev.dynalite.message_delay = 0
+        self.dyn_dev.configure(config)
         if num_devices == 0:
             self.new_dev_func.assert_not_called()
             return None
-        self.dyn_dev.configure(config)
         self.new_dev_func.assert_called_once()
         assert len(self.new_dev_func.mock_calls[0][1][0]) == num_devices
         return self.new_dev_func.mock_calls[0][1][0]
 
     async def async_setup(self):
         """Set up."""
-        await self.dyn_dev.async_setup()
+        return await self.dyn_dev.async_setup()
 
 
 @pytest.fixture()

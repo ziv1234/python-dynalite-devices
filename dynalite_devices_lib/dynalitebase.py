@@ -1,4 +1,5 @@
 """Support for the Dynalite devices."""
+from .const import CONF_CHANNEL
 
 
 class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the entity (light, switch, device, etc.)
@@ -14,11 +15,6 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
     def area_name(self):
         """Return the name of the area."""
         return self._bridge.get_area_name(self._area)
-
-    @property
-    def available(self):
-        """Return if device is available."""
-        return self._bridge.available
 
     @property
     def get_master_area(self):
@@ -42,6 +38,11 @@ class DynaliteChannelBaseDevice(DynaliteBaseDevice):
         """Initialize the device."""
         self._channel = channel
         super().__init__(area, bridge)
+
+    @property
+    def available(self):
+        """Return if device is available."""
+        return self._bridge.available(CONF_CHANNEL, self._area, self._channel)
 
     @property
     def name(self):

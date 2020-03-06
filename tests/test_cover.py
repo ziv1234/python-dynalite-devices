@@ -147,9 +147,17 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.receive(DynetPacket.report_channel_level_packet(1, 4, 0, 1))
     assert cover_device.is_closing
     await asyncio.sleep(0.01)
+    # Open and then stop with channel
     await mock_gateway.receive(DynetPacket.report_channel_level_packet(1, 4, 1, 0))
     assert cover_device.is_opening
     await mock_gateway.receive(DynetPacket.stop_channel_fade_packet(1, 4))
+    assert not cover_device.is_opening
+    assert not cover_device.is_closing
+    # Open and then stop with area (channel=0xff)
+    await mock_gateway.receive(DynetPacket.report_channel_level_packet(1, 4, 0, 1))
+    await mock_gateway.receive(DynetPacket.report_channel_level_packet(1, 4, 1, 0))
+    assert cover_device.is_opening
+    await mock_gateway.receive(DynetPacket.stop_channel_fade_packet(1, 256))
     assert not cover_device.is_opening
     assert not cover_device.is_closing
 

@@ -1,5 +1,6 @@
 """Support for the Dynalite channels and presets as switches."""
 
+from .const import CONF_PRESET, CONF_ROOM, CONF_TEMPLATE
 from .dynalitebase import (
     DynaliteBaseDevice,
     DynaliteChannelBaseDevice,
@@ -50,6 +51,11 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
         super().__init__(area, bridge)
 
     @property
+    def available(self):
+        """Return if device is available."""
+        return self._bridge.available(CONF_PRESET, self._area, self._preset)
+
+    @property
     def name(self):
         """Return the name of the device."""
         return self._bridge.get_preset_name(self._area, self._preset)
@@ -92,6 +98,11 @@ class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
     def __init__(self, area, bridge):
         """Initialize the switch."""
         super().__init__(2, area, bridge)
+
+    @property
+    def available(self):
+        """Return if device is available."""
+        return self._bridge.available(CONF_TEMPLATE, self._area, CONF_ROOM)
 
     @property
     def category(self):

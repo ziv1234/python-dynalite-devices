@@ -1,7 +1,7 @@
 """Support for the Dynalite channels as covers."""
 import asyncio
 
-from .const import ATTR_POSITION, ATTR_TILT_POSITION
+from .const import ATTR_POSITION, ATTR_TILT_POSITION, CONF_TEMPLATE, CONF_TIME_COVER
 from .dynalitebase import DynaliteMultiDevice
 
 
@@ -13,6 +13,11 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         self._current_position = 0
         self._direction = "stop"
         super().__init__(4, area, bridge)
+
+    @property
+    def available(self):
+        """Return if device is available."""
+        return self._bridge.available(CONF_TEMPLATE, self._area, CONF_TIME_COVER)
 
     @property
     def category(self):
