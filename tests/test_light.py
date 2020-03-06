@@ -11,7 +11,7 @@ async def test_light(mock_gateway):
     """Test the dynalite devices library."""
     name = "NAME"
     channel_name = "CHANNEL"
-    mock_gateway.configure_dyn_dev(
+    [device] = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
             dyn_const.CONF_AREA: {
@@ -28,7 +28,7 @@ async def test_light(mock_gateway):
             },
         }
     )
-    [device] = await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.async_setup_dyn_dev()
     assert device.category == "light"
     assert device.name == f"{name} {channel_name}"
     assert device.unique_id == "dynalite_area_1_channel_1"

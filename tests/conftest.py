@@ -68,13 +68,13 @@ class MockGateway:
         await self.writer.drain()
         await asyncio.sleep(0.01)
 
-    def configure_dyn_dev(self, config):
+    def configure_dyn_dev(self, config, num_devices=1, message_delay_zero=True):
         """Configure the DynaliteDevices."""
-        self.dyn_dev.dyn_dev.configure(config)
+        return self.dyn_dev.configure(config, num_devices, message_delay_zero)
 
-    async def async_setup_dyn_dev(self, num_devices=1, message_delay_zero=True):
+    async def async_setup_dyn_dev(self):
         """Set up the internal DynaliteDevices."""
-        return await self.dyn_dev.async_setup(num_devices, message_delay_zero)
+        return await self.dyn_dev.async_setup()
 
     def reset(self):
         """Reset the in buffer."""
@@ -93,18 +93,22 @@ class MockDynDev:
         )
         self.area = None
 
-    async def async_setup(self, num_devices, message_delay_zero):
-        """Set up and mock the writer."""
+    def configure(self, config, num_devices, message_delay_zero):
+        """Configure the DynaliteDevices."""
+        self.new_dev_func.reset_mock()
         if message_delay_zero:
             self.dyn_dev.dynalite.message_delay = 0
-        await self.dyn_dev.async_setup()
         if num_devices == 0:
             self.new_dev_func.assert_not_called()
             return None
+        self.dyn_dev.configure(config)
         self.new_dev_func.assert_called_once()
         assert len(self.new_dev_func.mock_calls[0][1][0]) == num_devices
-        await asyncio.sleep(0.01)
         return self.new_dev_func.mock_calls[0][1][0]
+
+    async def async_setup(self):
+        """Set up."""
+        await self.dyn_dev.async_setup()
 
 
 @pytest.fixture()

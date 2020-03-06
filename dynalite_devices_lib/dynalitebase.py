@@ -76,20 +76,10 @@ class DynaliteMultiDevice(DynaliteBaseDevice):
         """Get the first or second device."""
         return self._devices.get(devnum)
 
-    @property
-    def available(self):
-        """Return if dual device is available."""
-        for i in range(1, self._num_devices + 1):
-            if not self.get_device(i):
-                return False
-        return super().available
-
     def set_device(self, devnum, device):
         """Set one of the attached devices."""
         self._devices[devnum] = device
         device.add_listener(self.listener)
-        if self.available:
-            self._bridge.update_device(self)
 
     def listener(self, device, stop_fade):
         """Update the device since its internal devices changed."""

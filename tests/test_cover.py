@@ -13,7 +13,13 @@ pytestmark = pytest.mark.asyncio
 async def test_cover_no_tilt(mock_gateway):
     """Test the dynalite devices library."""
     name = "NAME"
-    mock_gateway.configure_dyn_dev(
+    [
+        channel_device,
+        open_device,
+        close_device,
+        stop_device,
+        cover_device,
+    ] = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
             dyn_const.CONF_POLL_TIMER: 0.05,
@@ -30,15 +36,10 @@ async def test_cover_no_tilt(mock_gateway):
                     dyn_const.CONF_PRESET: {"1": {}, "2": {}, "3": {}},
                 }
             },
-        }
+        },
+        5,
     )
-    [
-        channel_device,
-        open_device,
-        close_device,
-        stop_device,
-        cover_device,
-    ] = await mock_gateway.async_setup_dyn_dev(5)
+    await mock_gateway.async_setup_dyn_dev()
     assert channel_device.category == "light"
     assert open_device.category == "switch"
     assert close_device.category == "switch"
@@ -156,7 +157,7 @@ async def test_cover_no_tilt(mock_gateway):
 async def test_cover_with_tilt(mock_gateway):
     """Test the dynalite devices library."""
     name = "NAME"
-    mock_gateway.configure_dyn_dev(
+    [cover_device] = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
             dyn_const.CONF_POLL_TIMER: 0.05,
@@ -175,7 +176,7 @@ async def test_cover_with_tilt(mock_gateway):
             },
         }
     )
-    [cover_device] = await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.async_setup_dyn_dev()
     assert cover_device.category == "cover"
     assert cover_device.device_class == "blind"
     assert cover_device.has_tilt
@@ -240,3 +241,42 @@ async def test_cover_with_tilt(mock_gateway):
         and not cover_device.is_closing
     )
     assert 30 < cover_device.current_cover_tilt_position < 70
+
+
+async def test_cover_no_channel(mock_gateway):
+    """Test the dynalite devices library."""
+    name = "NAME"
+    [cover_device] = mock_gateway.configure_dyn_dev(
+        {
+            dyn_const.CONF_ACTIVE: False,
+            dyn_const.CONF_POLL_TIMER: 0.05,
+            dyn_const.CONF_AREA: {
+                "1": {
+                    dyn_const.CONF_NAME: name,
+                    dyn_const.CONF_TEMPLATE: dyn_const.CONF_TIME_COVER,
+                    dyn_const.CONF_DURATION: 0.5,
+                    dyn_const.CONF_OPEN_PRESET: 1,
+                    dyn_const.CONF_CLOSE_PRESET: 2,
+                    dyn_const.CONF_STOP_PRESET: 3,
+                }
+            },
+        }
+    )
+    await mock_gateway.async_setup_dyn_dev()
+    assert cover_device.category == "cover"
+    # It is closed. Let's open
+    assert cover_device.is_closed
+    await cover_device.async_open_cover()
+    await mock_gateway.check_single_write(
+        DynetPacket.select_area_preset_packet(1, 1, 0)
+    )
+    await asyncio.sleep(0.25)
+    assert cover_device.is_opening
+    assert 40 < cover_device.current_cover_position < 60
+    await asyncio.sleep(0.4)
+    assert (
+        not cover_device.is_closed
+        and not cover_device.is_opening
+        and not cover_device.is_closing
+    )
+    assert cover_device.current_cover_position == 100

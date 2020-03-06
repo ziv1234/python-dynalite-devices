@@ -1,7 +1,7 @@
 """Support for the Dynalite channels as covers."""
 import asyncio
 
-from .const import ATTR_POSITION, ATTR_TILT_POSITION, LOGGER
+from .const import ATTR_POSITION, ATTR_TILT_POSITION
 from .dynalitebase import DynaliteMultiDevice
 
 
@@ -48,6 +48,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         """Update the progress of open and close."""
         duration = self._bridge.get_cover_duration(self._area)
         poll_timer = self._bridge.poll_timer
+        assert self._direction in ["open", "close"]
         if self._direction == "open":
             self._current_position += poll_timer / duration
             getattr(self, "update_tilt", int)(poll_timer)
@@ -163,15 +164,11 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
 
     def update_tilt(self, poll_timer):
         """Update the current tilt based on diff and tilt_percentage."""
+        assert self._direction in ["open", "close"]
         if self._direction == "open":
             mult = poll_timer
         elif self._direction == "close":
             mult = -poll_timer
-        else:
-            LOGGER.error(
-                "update_tilt called with invalid direction %s", self._direction
-            )
-            return
         tilt_duration = self._bridge.get_cover_tilt_duration(self._area)
         tilt_diff = mult / tilt_duration
         self._current_tilt = max(0, min(1, self._current_tilt + tilt_diff))
