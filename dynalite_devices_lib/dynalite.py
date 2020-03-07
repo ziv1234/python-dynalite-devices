@@ -133,11 +133,6 @@ class Dynalite:
         packet = DynetPacket.request_channel_level_packet(area, channel)
         self.write(packet)
 
-    def stop_channel_fade(self, area, channel):
-        """Stop fading of a channel - async."""
-        packet = DynetPacket.stop_channel_fade_packet(area, channel)
-        self.write(packet)
-
     def request_area_preset(self, area):
         """Request current preset of an area."""
         packet = DynetPacket.request_area_preset_packet(area)

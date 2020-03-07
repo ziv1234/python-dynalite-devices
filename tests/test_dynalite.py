@@ -234,7 +234,7 @@ async def test_dynalite_write_message_throttle(mock_gateway):
         {
             dyn_const.CONF_ACTIVE: True,
             dyn_const.CONF_AREA: {
-                str(i): {dyn_const.CONF_CHANNEL: {1: {}}} for i in range(1, 26)
+                i: {dyn_const.CONF_CHANNEL: {1: {}}} for i in range(1, 26)
             },
             dyn_const.CONF_PRESET: {},
         },
