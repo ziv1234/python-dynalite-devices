@@ -43,6 +43,40 @@ async def test_dynalite_disconnection(mock_gateway):
             assert device.available
 
 
+async def test_dynalite_connection_reset(mock_gateway):
+    """Test the dynalite devices library."""
+    devices = mock_gateway.configure_dyn_dev(
+        {
+            dyn_const.CONF_ACTIVE: True,
+            dyn_const.CONF_AREA: {
+                "1": {dyn_const.CONF_CHANNEL: {"1": {}, "2": {}}},
+                "2": {dyn_const.CONF_TEMPLATE: dyn_const.CONF_ROOM},
+                "3": {dyn_const.CONF_TEMPLATE: dyn_const.CONF_TIME_COVER},
+            },
+            dyn_const.CONF_PRESET: {"6": {}},
+        },
+        5,
+    )
+    assert await mock_gateway.async_setup_dyn_dev()
+    for device in devices:
+        assert device.available
+    # Disconnect
+    with patch("dynalite_devices_lib.dynalite.CONNECTION_RETRY_DELAY", 0.1):
+        # Ugly, but the only way I found to reset a connection was to close the
+        # writer. Couldn't find a way to do it from the remote server.
+        writer = device._bridge.dynalite.writer
+        writer.close()
+        await writer.wait_closed()
+        await mock_gateway.shutdown()
+        await asyncio.sleep(0.05)
+        for device in devices:
+            assert not device.available
+        await mock_gateway.async_setup_server()
+        await asyncio.sleep(0.1)
+        for device in devices:
+            assert device.available
+
+
 async def test_dynalite_no_server(mock_gateway):
     """Test the dynalite devices library."""
     mock_gateway.configure_dyn_dev({dyn_const.CONF_PORT: 12333}, 0)

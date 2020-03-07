@@ -206,12 +206,13 @@ class DynaliteDevices:
                         self.area[area][conf] = preset
                     elif conf in conf_channels:
                         channel = int(conf_value)
-                        if channel not in area_channels:
-                            area_channels[channel] = {
-                                CONF_NAME: f"Channel {channel}",
-                                CONF_FADE: self.area[area][CONF_FADE],
-                                CONF_HIDDEN_ENTITY: True,
-                            }
+                        if 0 < channel < 255:
+                            if channel not in area_channels:
+                                area_channels[channel] = {
+                                    CONF_NAME: f"Channel {channel}",
+                                    CONF_FADE: self.area[area][CONF_FADE],
+                                    CONF_HIDDEN_ENTITY: True,
+                                }
                         self.area[area][conf] = channel
                     else:
                         assert conf in conf_values
