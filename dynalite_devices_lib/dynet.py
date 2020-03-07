@@ -64,6 +64,10 @@ class DynetPacket:
         self.command = self.msg[3]
         self.join = self.msg[6]
         self.chk = self.msg[7]
+        if self.chk != self.calc_sum(msg):
+            raise PacketError(
+                f"Message with the wrong checksum - {[int(byte) for byte in msg]}"
+            )
         if self.sync == 28:
             if OpcodeType.has_value(self.command):
                 self.opcode_type = OpcodeType(self.command).name

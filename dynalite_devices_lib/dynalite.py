@@ -18,6 +18,7 @@ from .const import (
     CONF_CHANNEL,
     CONF_PRESET,
     CONF_TRGT_LEVEL,
+    CONNECTION_RETRY_DELAY,
     EVENT_CHANNEL,
     EVENT_CONNECTED,
     EVENT_DISCONNECTED,
@@ -42,8 +43,7 @@ class Dynalite:
         self._in_buffer = []
         self._out_buffer = []
         self._last_sent = None
-        self.message_delay = 200
-        self._sending = False
+        self.message_delay = 0.2
         self.reader = None
         self.writer = None
         self.resetting = False
@@ -92,12 +92,14 @@ class Dynalite:
             self.reader = None
             self.writer = None
             self.broadcast(DynetEvent(event_type=EVENT_DISCONNECTED, data={}))
-            await asyncio.sleep(1)  # Don't overload the network
+            await asyncio.sleep(CONNECTION_RETRY_DELAY)  # Don't overload the network
             while not await self.connect_internal():
                 if self.resetting:
                     self.reader = None
                     return  # stop loop
-                await asyncio.sleep(1)  # Don't overload the network
+                await asyncio.sleep(
+                    CONNECTION_RETRY_DELAY
+                )  # Don't overload the network
             self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
 
     def broadcast(self, event):
@@ -173,8 +175,6 @@ class Dynalite:
                     except PacketError as err:
                         LOGGER.warning(err)
                         packet = None
-                else:
-                    LOGGER.error("wrong first_byte - we shouldn't get here")
             if packet is None:
                 hex_string = ":".join("{:02x}".format(c) for c in self._in_buffer[:8])
                 LOGGER.debug(
@@ -208,22 +208,17 @@ class Dynalite:
             LOGGER.debug("write before transport is ready. queuing")
             return
         if self.message_delay > 0:  # in testing it is set to 0
-            if self._sending:
-                LOGGER.debug("Connection busy - queuing packet")
-                self.loop.call_later(1, self.write)
-                return
             if self._last_sent is None:
-                self._last_sent = int(round(time.time() * 1000))
-            current_milli_time = int(round(time.time() * 1000))
-            elapsed = current_milli_time - self._last_sent
-            delay = 0 - (elapsed - self.message_delay)
+                self._last_sent = time.time()
+            current_time = time.time()
+            elapsed = current_time - self._last_sent
+            delay = self.message_delay - elapsed
             if delay > 0:
-                self.loop.call_later(delay / 1000, self.write)
+                self.loop.call_later(delay, self.write)
                 return
         if len(self._out_buffer) == 0:
             return
         packet = self._out_buffer[0]
-        self._sending = True
         msg = bytearray()
         msg.append(packet.sync)
         msg.append(packet.area)
@@ -235,11 +230,10 @@ class Dynalite:
         msg.append(packet.chk)
         self.writer.write(msg)
         LOGGER.debug("Dynet Sent: %s", msg)
-        self._last_sent = int(round(time.time() * 1000))
-        self._sending = False
+        self._last_sent = time.time()
         del self._out_buffer[0]
         if len(self._out_buffer) > 0:
-            self.loop.call_later(self.message_delay / 1000, self.write)
+            self.loop.call_later(self.message_delay, self.write)
 
     async def async_reset(self):
         """Close sockets and timers."""

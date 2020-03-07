@@ -78,14 +78,4 @@ EVENT_CONNECTED = "CONNECTED"
 EVENT_DISCONNECTED = "DISCONNECTED"
 EVENT_PRESET = "PRESET"
 
-# if a request for channel level didn't get acknowledge, when to retry
-# (subsequent retries will be 2x, 4x, 8x, etc.)
-INITIAL_RETRY_DELAY = 1
-# initial retry timeout for the beginning, since it could take time to settle
-# on Dynet for large environments
-STARTUP_RETRY_DELAY = 60
-# Minimal retry frequency in seconds - default 1 hour, so if something never
-# answers, it will be pinged once an hour XXX consider changing
-MAXIMUM_RETRY_DELAY = 60 * 60
-# no retry value for delay
-NO_RETRY_DELAY_VALUE = -1
+CONNECTION_RETRY_DELAY = 1  # seconds to reconnect

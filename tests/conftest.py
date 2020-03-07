@@ -63,11 +63,15 @@ class MockGateway:
         """Check that there was only a single write issued."""
         await self.check_writes([packet])
 
-    async def receive(self, packet):
-        """Fake a received packet."""
-        self.writer.write(packet.msg)
+    async def receive_message(self, message):
+        """Fake a received message."""
+        self.writer.write(message)
         await self.writer.drain()
         await asyncio.sleep(0.01)
+
+    async def receive(self, packet):
+        """Fake a received packet."""
+        await self.receive_message(packet.msg)
 
     def configure_dyn_dev(self, config, num_devices=1, message_delay_zero=True):
         """Configure the DynaliteDevices."""
