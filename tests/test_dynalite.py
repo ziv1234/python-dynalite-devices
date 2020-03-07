@@ -41,3 +41,22 @@ async def test_dynalite_no_server(mock_gateway):
     """Test the dynalite devices library."""
     mock_gateway.configure_dyn_dev({dyn_const.CONF_PORT: 12333}, 0)
     assert not await mock_gateway.async_setup_dyn_dev()
+
+
+async def test_dynalite_shutdown_with_server_down(mock_gateway):
+    """Test the dynalite devices library."""
+    devices = mock_gateway.configure_dyn_dev(
+        {
+            dyn_const.CONF_ACTIVE: False,
+            dyn_const.CONF_AREA: {"1": {dyn_const.CONF_CHANNEL: {"1": {}}}},
+            dyn_const.CONF_PRESET: {},
+        },
+    )
+    assert await mock_gateway.async_setup_dyn_dev()
+    for device in devices:
+        assert device.available
+    # Disconnect
+    await mock_gateway.shutdown()
+    await asyncio.sleep(0.1)
+    for device in devices:
+        assert not device.available

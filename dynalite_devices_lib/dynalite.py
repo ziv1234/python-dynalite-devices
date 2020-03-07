@@ -47,6 +47,7 @@ class Dynalite:
         self.reader = None
         self.writer = None
         self.resetting = False
+        self.reader_future = None
 
     async def connect_internal(self):
         """Create the actual connection to Dynet."""
@@ -69,7 +70,7 @@ class Dynalite:
         self.resetting = False
         result = await self.connect_internal()
         if result and not self.resetting:
-            self.loop.create_task(self.reader_loop())
+            self.reader_future = self.loop.create_task(self.reader_loop())
             self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
         return result
 
@@ -244,10 +245,5 @@ class Dynalite:
         """Close sockets and timers."""
         self.resetting = True
         # Wait for reader to also close
-        while self.reader:
-            if self.writer:
-                temp_writer = self.writer
-                self.writer = None
-                temp_writer.close()
-                await temp_writer.wait_closed()
-            await asyncio.sleep(0.1)
+        if self.reader_future:
+            await self.reader_future

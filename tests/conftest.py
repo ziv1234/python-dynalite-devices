@@ -83,7 +83,14 @@ class MockGateway:
 
     def reset_connection(self):
         """Reset the current connection."""
-        self.writer.close()
+        if self.writer:
+            self.writer.close()
+
+    async def shutdown(self):
+        """Shut down the server."""
+        self.reset_connection()
+        self.server.close()
+        await self.server.wait_closed()
 
 
 class MockDynDev:
@@ -123,8 +130,7 @@ async def mock_gateway(request):
     async def async_fin():
         """Shut the gateway down."""
         dyn_const.LOGGER.error("AAA - here")
-        gateway.server.close()
-        await gateway.server.wait_closed()
+        await gateway.shutdown()
         await gateway.dyn_dev.dyn_dev.async_reset()
 
     def fin():
