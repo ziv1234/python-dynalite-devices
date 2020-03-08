@@ -2,7 +2,7 @@
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
-import dynalite_devices_lib.dynet as dyn_dynet
+from dynalite_devices_lib.dynet import DynetPacket
 
 pytestmark = pytest.mark.asyncio
 
@@ -37,32 +37,26 @@ async def test_light(mock_gateway):
     assert device.get_master_area == name
     await device.async_turn_on()
     await mock_gateway.check_single_write(
-        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+        DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     )
     assert device.brightness == 255
     await device.async_turn_on(brightness=51)
     await mock_gateway.check_single_write(
-        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5)
+        DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5)
     )
     assert device.brightness == 51
     await device.async_turn_off()
     await mock_gateway.check_single_write(
-        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0, 0.5)
+        DynetPacket.set_channel_level_packet(1, 1, 0, 0.5)
     )
     assert device.brightness == 0
     # Now send commands
-    await mock_gateway.receive(
-        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
-    )
+    await mock_gateway.receive(DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5))
     assert device.brightness == 255
     assert device.is_on
-    await mock_gateway.receive(
-        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5)
-    )
+    await mock_gateway.receive(DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5))
     assert device.brightness == 51
     assert device.is_on
-    await mock_gateway.receive(
-        dyn_dynet.DynetPacket.report_channel_level_packet(1, 1, 0, 0)
-    )
+    await mock_gateway.receive(DynetPacket.report_channel_level_packet(1, 1, 0, 0))
     assert device.brightness == 0
     assert not device.is_on

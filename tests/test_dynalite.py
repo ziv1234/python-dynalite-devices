@@ -6,7 +6,7 @@ from asynctest import patch
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
-import dynalite_devices_lib.dynet as dyn_dynet
+from dynalite_devices_lib.dynet import DynetPacket
 from dynalite_devices_lib.opcodes import SyncType
 
 pytestmark = pytest.mark.asyncio
@@ -111,7 +111,7 @@ async def test_dynalite_split_message(mock_gateway):
     )
     assert await mock_gateway.async_setup_dyn_dev()
     assert not device.is_on
-    packet = dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+    packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     msg1 = packet.msg[0:5]
     msg2 = packet.msg[5:8]
     await mock_gateway.receive_message(msg1)
@@ -130,7 +130,7 @@ async def test_dynalite_shift_message(mock_gateway):
     )
     assert await mock_gateway.async_setup_dyn_dev()
     assert not device.is_on
-    packet = dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+    packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     message = bytearray([3, 7, 12]) + packet.msg
     await mock_gateway.receive_message(message)
     assert device.is_on
@@ -149,7 +149,7 @@ async def test_dynalite_debug_message(mock_gateway):
     assert not device.is_on
     # putting a debug message + a device-on message half-way.
     # will verify that it will first read the debug message and then ignore other
-    packet = dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+    packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     message = bytearray([SyncType.DEBUG_MSG.value, 7, 12]) + packet.msg
     await mock_gateway.receive_message(message)
     assert not device.is_on
@@ -170,7 +170,7 @@ async def test_dynalite_device_message(mock_gateway):
     assert not device.is_on
     # putting a device message + a device-on message half-way.
     # will verify that it will first read the device message and then ignore other
-    packet = dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+    packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     message = bytearray([SyncType.DEVICE.value, 7, 12]) + packet.msg
     await mock_gateway.receive_message(message)
     assert not device.is_on
@@ -189,14 +189,12 @@ async def test_dynalite_error_message(mock_gateway):
     )
     assert await mock_gateway.async_setup_dyn_dev()
     assert not device.is_on
-    packet = dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+    packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     message = packet.msg
     message[7] += 1
     await mock_gateway.receive_message(message)
     assert not device.is_on
-    await mock_gateway.receive(
-        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
-    )
+    await mock_gateway.receive(DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5))
     assert device.is_on
 
 
@@ -211,13 +209,11 @@ async def test_dynalite_unhandled_message(mock_gateway):
     )
     assert await mock_gateway.async_setup_dyn_dev()
     assert not device.is_on
-    packet = dyn_dynet.DynetPacket()
+    packet = DynetPacket()
     packet.to_msg(1, 45, [0, 0, 0])
     await mock_gateway.receive(packet)
     assert not device.is_on
-    await mock_gateway.receive(
-        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
-    )
+    await mock_gateway.receive(DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5))
     assert device.is_on
 
 
@@ -232,13 +228,11 @@ async def test_dynalite_unknown_message(mock_gateway):
     )
     assert await mock_gateway.async_setup_dyn_dev()
     assert not device.is_on
-    packet = dyn_dynet.DynetPacket()
+    packet = DynetPacket()
     packet.to_msg(1, 200, [0, 0, 0])
     await mock_gateway.receive(packet)
     assert not device.is_on
-    await mock_gateway.receive(
-        dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
-    )
+    await mock_gateway.receive(DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5))
     assert device.is_on
 
 
@@ -255,8 +249,8 @@ async def test_dynalite_two_messages(mock_gateway):
     assert await mock_gateway.async_setup_dyn_dev()
     for device in devices:
         assert not device.is_on
-    packet1 = dyn_dynet.DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
-    packet2 = dyn_dynet.DynetPacket.set_channel_level_packet(1, 2, 1.0, 0.5)
+    packet1 = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+    packet2 = DynetPacket.set_channel_level_packet(1, 2, 1.0, 0.5)
     await mock_gateway.receive_message(packet1.msg + packet2.msg)
     for device in devices:
         assert device.is_on
