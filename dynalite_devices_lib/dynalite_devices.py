@@ -64,7 +64,7 @@ class BridgeError(Exception):
 class DynaliteDevices:
     """Manages a single Dynalite bridge."""
 
-    def __init__(self, loop=None, new_device_func=None, update_device_func=None):
+    def __init__(self, new_device_func=None, update_device_func=None):
         """Initialize the system."""
         self.host = None
         self.port = None
@@ -73,7 +73,7 @@ class DynaliteDevices:
         self.default_fade = None
         self.active = None
         self.auto_discover = None
-        self.loop = loop
+        self.loop = None
         self.new_device_func = new_device_func
         self.update_device_func = update_device_func
         self.configured = False

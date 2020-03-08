@@ -24,6 +24,7 @@ from .const import (
     EVENT_DISCONNECTED,
     EVENT_PRESET,
     LOGGER,
+    MESSAGE_DELAY,
 )
 from .dynet import DynetPacket, PacketError
 from .event import DynetEvent
@@ -41,7 +42,7 @@ class Dynalite:
         self._in_buffer = []
         self._out_buffer = []
         self._last_sent = None
-        self.message_delay = 0.2  # public for testing
+        self._message_delay = MESSAGE_DELAY  # public for testing
         self._reader = None
         self._writer = None
         self._resetting = False
@@ -91,9 +92,8 @@ class Dynalite:
                 if self._resetting:
                     self._reader = None
                     return  # stop loop
-                await asyncio.sleep(
-                    CONNECTION_RETRY_DELAY
-                )  # Don't overload the network
+                # Don't overload the network
+                await asyncio.sleep(CONNECTION_RETRY_DELAY)
             self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
 
     def broadcast(self, event):
@@ -196,12 +196,12 @@ class Dynalite:
         if self._writer is None:
             LOGGER.debug("write before transport is ready. queuing")
             return
-        if self.message_delay > 0:  # in testing it is set to 0
+        if self._message_delay > 0:  # in testing it is set to 0
             if self._last_sent is None:
                 self._last_sent = time.time()
             current_time = time.time()
             elapsed = current_time - self._last_sent
-            delay = self.message_delay - elapsed
+            delay = self._message_delay - elapsed
             if delay > 0:
                 self._loop.call_later(delay, self.write)
                 return
@@ -214,7 +214,7 @@ class Dynalite:
         self._last_sent = time.time()
         del self._out_buffer[0]
         if len(self._out_buffer) > 0:
-            self._loop.call_later(self.message_delay, self.write)
+            self._loop.call_later(self._message_delay, self.write)
 
     async def async_reset(self):
         """Close sockets and timers."""

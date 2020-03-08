@@ -254,9 +254,9 @@ async def test_dynalite_two_messages(mock_gateway):
         assert device.is_on
 
 
-async def test_dynalite_write_message_throttle(mock_gateway):
+async def test_dynalite_write_message_throttle(mock_gateway_with_delay):
     """Test that when we send many messages, it throttles the messages."""
-    mock_gateway.configure_dyn_dev(
+    mock_gateway_with_delay.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: True,
             dyn_const.CONF_AREA: {
@@ -267,6 +267,6 @@ async def test_dynalite_write_message_throttle(mock_gateway):
         25,
         False,
     )
-    assert await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway_with_delay.async_setup_dyn_dev()
     await asyncio.sleep(1)  # should be roughly 5 messages
-    assert 3 * 8 <= len(mock_gateway.in_buffer) <= 7 * 8
+    assert 3 * 8 <= len(mock_gateway_with_delay.in_buffer) <= 7 * 8

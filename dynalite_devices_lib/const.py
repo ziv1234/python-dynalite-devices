@@ -78,3 +78,4 @@ EVENT_DISCONNECTED = "DISCONNECTED"
 EVENT_PRESET = "PRESET"
 
 CONNECTION_RETRY_DELAY = 1  # seconds to reconnect
+MESSAGE_DELAY = 0.2  # seconds between sending

@@ -1,7 +1,7 @@
 """Fixtures for the Dynalite tests."""
 import asyncio
 
-from asynctest import Mock
+from asynctest import Mock, patch
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
@@ -13,13 +13,13 @@ pytestmark = pytest.mark.asyncio
 class MockGateway:
     """Class to mock a TCP gateway."""
 
-    def __init__(self):
+    def __init__(self, message_delay_zero):
         """Initialize the class."""
         self.reader = None
         self.writer = None
         self.server = None
         self.in_buffer = bytearray()
-        self.dyn_dev = MockDynDev()
+        self.dyn_dev = MockDynDev(message_delay_zero)
 
     async def run_server(self):
         """Run the actual server."""
@@ -73,9 +73,9 @@ class MockGateway:
         """Fake a received packet."""
         await self.receive_message(packet.msg)
 
-    def configure_dyn_dev(self, config, num_devices=1, message_delay_zero=True):
+    def configure_dyn_dev(self, config, num_devices=1, message_delay_zero=True):  # XXX
         """Configure the DynaliteDevices."""
-        return self.dyn_dev.configure(config, num_devices, message_delay_zero)
+        return self.dyn_dev.configure(config, num_devices)
 
     async def async_setup_dyn_dev(self):
         """Set up the internal DynaliteDevices."""
@@ -100,20 +100,26 @@ class MockGateway:
 class MockDynDev:
     """Class for a mock DynaliteDevices object."""
 
-    def __init__(self):
+    def __init__(self, message_delay_zero):
         """Initialize the Mock."""
         self.new_dev_func = Mock()
         self.update_dev_func = Mock()
-        self.dyn_dev = DynaliteDevices(
-            new_device_func=self.new_dev_func, update_device_func=self.update_dev_func
-        )
+        if message_delay_zero:
+            with patch("dynalite_devices_lib.dynalite.MESSAGE_DELAY", 0):
+                self.dyn_dev = DynaliteDevices(
+                    new_device_func=self.new_dev_func,
+                    update_device_func=self.update_dev_func,
+                )
+        else:
+            self.dyn_dev = DynaliteDevices(
+                new_device_func=self.new_dev_func,
+                update_device_func=self.update_dev_func,
+            )
         self.area = None
 
-    def configure(self, config, num_devices, message_delay_zero):
+    def configure(self, config, num_devices):
         """Configure the DynaliteDevices."""
         self.new_dev_func.reset_mock()
-        if message_delay_zero:
-            self.dyn_dev.dynalite.message_delay = 0
         self.dyn_dev.configure(config)
         if num_devices == 0:
             self.new_dev_func.assert_not_called()
@@ -141,6 +147,25 @@ async def mock_gateway(request):
         asyncio.get_event_loop().run_until_complete(async_fin())
 
     request.addfinalizer(fin)
-    gateway = MockGateway()
+    gateway = MockGateway(message_delay_zero=True)
+    await gateway.async_setup_server()
+    return gateway
+
+
+@pytest.fixture()
+async def mock_gateway_with_delay(request):
+    """Mock for a TCP gateway."""
+
+    async def async_fin():
+        """Shut the gateway down."""
+        await gateway.shutdown()
+        await gateway.dyn_dev.dyn_dev.async_reset()
+
+    def fin():
+        """Run shutdown async."""
+        asyncio.get_event_loop().run_until_complete(async_fin())
+
+    request.addfinalizer(fin)
+    gateway = MockGateway(message_delay_zero=False)
     await gateway.async_setup_server()
     return gateway
