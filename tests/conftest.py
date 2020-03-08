@@ -13,8 +13,9 @@ pytestmark = pytest.mark.asyncio
 class MockGateway:
     """Class to mock a TCP gateway."""
 
-    def __init__(self, message_delay_zero):
+    def __init__(self, request, message_delay_zero):
         """Initialize the class."""
+        request.addfinalizer(self.fin)
         self.reader = None
         self.writer = None
         self.server = None
@@ -115,40 +116,27 @@ class MockGateway:
         self.server.close()
         await self.server.wait_closed()
 
+    async def async_fin(self):
+        """Shut the gateway down."""
+        await self.shutdown()
+        await self.dyn_dev.async_reset()
+
+    def fin(self):
+        """Run shutdown async."""
+        asyncio.get_event_loop().run_until_complete(self.async_fin())
+
 
 @pytest.fixture()
 async def mock_gateway(request):
-    """Mock for a TCP gateway."""
-
-    async def async_fin():
-        """Shut the gateway down."""
-        await gateway.shutdown()
-        await gateway.dyn_dev.async_reset()
-
-    def fin():
-        """Run shutdown async."""
-        asyncio.get_event_loop().run_until_complete(async_fin())
-
-    request.addfinalizer(fin)
-    gateway = MockGateway(message_delay_zero=True)
+    """Mock for a TCP gateway. Removes throttling by Dynet."""
+    gateway = MockGateway(request, True)
     await gateway.async_setup_server()
     return gateway
 
 
 @pytest.fixture()
 async def mock_gateway_with_delay(request):
-    """Mock for a TCP gateway."""
-
-    async def async_fin():
-        """Shut the gateway down."""
-        await gateway.shutdown()
-        await gateway.dyn_dev.async_reset()
-
-    def fin():
-        """Run shutdown async."""
-        asyncio.get_event_loop().run_until_complete(async_fin())
-
-    request.addfinalizer(fin)
-    gateway = MockGateway(message_delay_zero=False)
+    """Mock for a TCP gateway. Keeps throttling by Dynet."""
+    gateway = MockGateway(request, False)
     await gateway.async_setup_server()
     return gateway
