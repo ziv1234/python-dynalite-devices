@@ -265,7 +265,6 @@ async def test_dynalite_write_message_throttle(mock_gateway_with_delay):
             dyn_const.CONF_PRESET: {},
         },
         25,
-        False,
     )
     assert await mock_gateway_with_delay.async_setup_dyn_dev()
     await asyncio.sleep(1)  # should be roughly 5 messages

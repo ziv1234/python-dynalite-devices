@@ -31,7 +31,7 @@ class DynetInbound:
 
     def __init__(self):
         """Initialize the object."""
-        self._logger = None
+        pass
 
     @staticmethod
     def preset(packet):

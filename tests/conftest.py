@@ -73,7 +73,7 @@ class MockGateway:
         """Fake a received packet."""
         await self.receive_message(packet.msg)
 
-    def configure_dyn_dev(self, config, num_devices=1, message_delay_zero=True):  # XXX
+    def configure_dyn_dev(self, config, num_devices=1):
         """Configure the DynaliteDevices."""
         return self.dyn_dev.configure(config, num_devices)
 
@@ -115,7 +115,6 @@ class MockDynDev:
                 new_device_func=self.new_dev_func,
                 update_device_func=self.update_dev_func,
             )
-        self.area = None
 
     def configure(self, config, num_devices):
         """Configure the DynaliteDevices."""
