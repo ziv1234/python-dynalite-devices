@@ -18,7 +18,6 @@ from .const import (
     CONF_AREA,
     CONF_CHANNEL,
     CONF_FADE,
-    CONF_JOIN,
     CONF_PRESET,
     CONF_TRGT_LEVEL,
     EVENT_CHANNEL,
@@ -53,7 +52,6 @@ class DynetInbound:
                 CONF_AREA: packet.area,
                 CONF_PRESET: packet.preset,
                 CONF_FADE: packet.fade,
-                CONF_JOIN: packet.join,
             },
         )
 
@@ -96,11 +94,7 @@ class DynetInbound:
         return DynetEvent(
             event_type=EVENT_PRESET,
             message=("Current Area %d Preset is %d" % (packet.area, packet.preset)),
-            data={
-                CONF_AREA: packet.area,
-                CONF_PRESET: packet.preset,
-                CONF_JOIN: packet.join,
-            },
+            data={CONF_AREA: packet.area, CONF_PRESET: packet.preset},
         )
 
     @staticmethod
@@ -118,7 +112,6 @@ class DynetInbound:
                 CONF_AREA: packet.area,
                 CONF_PRESET: packet.preset,
                 CONF_FADE: packet.fade,
-                CONF_JOIN: packet.join,
             },
         )
 
@@ -131,8 +124,11 @@ class DynetInbound:
         return DynetEvent(
             event_type=EVENT_CHANNEL,
             message=(
-                "Area %d Channel %d Target Level %d Actual Level %d."
-                % (packet.area, channel, target_level, actual_level)
+                "Area %d Channel %d Target Level %d Actual Level %d.",
+                packet.area,
+                channel,
+                target_level,
+                actual_level,
             ),
             data={
                 CONF_AREA: packet.area,
@@ -140,7 +136,6 @@ class DynetInbound:
                 CONF_ACTION: CONF_ACTION_REPORT,
                 CONF_TRGT_LEVEL: target_level,
                 CONF_ACT_LEVEL: actual_level,
-                CONF_JOIN: packet.join,
             },
         )
 
@@ -152,15 +147,16 @@ class DynetInbound:
         return DynetEvent(
             event_type=EVENT_CHANNEL,
             message=(
-                "Area %d Channel %d Target Level %d"
-                % (packet.area, channel, target_level)
+                "Area %d Channel %d Target Level %d",
+                packet.area,
+                channel,
+                target_level,
             ),
             data={
                 CONF_AREA: packet.area,
                 CONF_CHANNEL: channel,
                 CONF_ACTION: CONF_ACTION_CMD,
                 CONF_TRGT_LEVEL: target_level,
-                CONF_JOIN: packet.join,
             },
         )
 
@@ -198,6 +194,5 @@ class DynetInbound:
                 CONF_AREA: packet.area,
                 CONF_CHANNEL: channel,
                 CONF_ACTION: CONF_ACTION_STOP,
-                CONF_JOIN: packet.join,
             },
         )

@@ -208,17 +208,9 @@ class Dynalite:
         if len(self._out_buffer) == 0:
             return
         packet = self._out_buffer[0]
-        msg = bytearray()
-        msg.append(packet.sync)
-        msg.append(packet.area)
-        msg.append(packet.data[0])
-        msg.append(packet.command)
-        msg.append(packet.data[1])
-        msg.append(packet.data[2])
-        msg.append(packet.join)
-        msg.append(packet.chk)
+        msg = packet.msg
         self._writer.write(msg)
-        LOGGER.debug("Dynet Sent: %s", msg)
+        LOGGER.debug("Dynet Sent: %s", [int(byte) for byte in msg])
         self._last_sent = time.time()
         del self._out_buffer[0]
         if len(self._out_buffer) > 0:

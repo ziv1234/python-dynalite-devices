@@ -28,25 +28,22 @@ class DynetPacket:
     def __init__(self, msg=None):
         """Initialize the packet."""
         self.opcode_type = None
-        self.sync = None
         self.area = None
         self.data = []
         self.command = None
-        self.join = None
-        self.chk = None
         if msg is not None:
             self.from_msg(msg)
 
-    def to_msg(self, area, command, data, sync=SyncType.LOGICAL.value, join=255):
+    def to_msg(self, area, command, data):
         """Convert packet to a binary message."""
         my_bytes = bytearray()
-        my_bytes.append(sync)
+        my_bytes.append(SyncType.LOGICAL.value)
         my_bytes.append(area)
         my_bytes.append(data[0])
         my_bytes.append(command)
         my_bytes.append(data[1])
         my_bytes.append(data[2])
-        my_bytes.append(join)
+        my_bytes.append(255)  # join
         my_bytes.append(self.calc_sum(my_bytes))
         self.from_msg(my_bytes)
 
@@ -58,17 +55,16 @@ class DynetPacket:
         if message_length > 8:
             raise PacketError(f"Message too long ({len(msg)} bytes): {msg}")
         self.msg = msg
-        self.sync = self.msg[0]
-        self.area = self.msg[1]
-        self.data = [self.msg[2], self.msg[4], self.msg[5]]
-        self.command = self.msg[3]
-        self.join = self.msg[6]
-        self.chk = self.msg[7]
-        if self.chk != self.calc_sum(msg):
+        sync = msg[0]
+        self.area = msg[1]
+        self.data = [msg[2], msg[4], msg[5]]
+        self.command = msg[3]
+        chk = self.msg[7]
+        if chk != self.calc_sum(msg):
             raise PacketError(
                 f"Message with the wrong checksum - {[int(byte) for byte in msg]}"
             )
-        if self.sync == 28:
+        if sync == SyncType.LOGICAL.value:
             if OpcodeType.has_value(self.command):
                 self.opcode_type = OpcodeType(self.command).name
 
