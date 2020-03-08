@@ -2,36 +2,29 @@
 
 import asyncio
 
-from .area_config import configure_area, configure_channel, configure_preset
+from .config import DynaliteConfig
 from .const import (
     CONF_ACT_LEVEL,
     CONF_ACTION,
     CONF_ACTION_CMD,
     CONF_ACTION_REPORT,
     CONF_ACTION_STOP,
-    CONF_ACTIVE,
     CONF_ACTIVE_INIT,
-    CONF_ACTIVE_OFF,
     CONF_ACTIVE_ON,
     CONF_ALL,
     CONF_AREA,
     CONF_AREA_OVERRIDE,
-    CONF_AUTO_DISCOVER,
     CONF_CHANNEL,
     CONF_CHANNEL_COVER,
     CONF_CHANNEL_TYPE,
     CONF_CLOSE_PRESET,
-    CONF_DEFAULT,
     CONF_DEVICE_CLASS,
     CONF_DURATION,
     CONF_FADE,
     CONF_HIDDEN_ENTITY,
-    CONF_HOST,
     CONF_NAME,
     CONF_NONE,
     CONF_OPEN_PRESET,
-    CONF_POLL_TIMER,
-    CONF_PORT,
     CONF_PRESET,
     CONF_ROOM,
     CONF_ROOM_OFF,
@@ -42,10 +35,6 @@ from .const import (
     CONF_TIME_COVER,
     CONF_TRGT_LEVEL,
     DEFAULT_CHANNEL_TYPE,
-    DEFAULT_NAME,
-    DEFAULT_PORT,
-    DEFAULT_PRESETS,
-    DEFAULT_TEMPLATES,
     EVENT_CHANNEL,
     EVENT_CONNECTED,
     EVENT_DISCONNECTED,
@@ -96,7 +85,6 @@ class DynaliteDevices:
         self.waiting_devices = []
         self.timer_active = False
         self.timer_callbacks = set()
-        self.template = {}
         self.area = {}
         self.dynalite = Dynalite(broadcast_func=self.handle_event)
         self.resetting = False
@@ -112,47 +100,21 @@ class DynaliteDevices:
         return self.connected
 
     def configure(self, config):
-        """Configure a Dynalite bridge based on host parameter in the config."""
+        """Configure a Dynalite bridge."""
         LOGGER.debug("bridge async_configure - %s", config)
         self.configured = False
+        configurator = DynaliteConfig(config)
         # insert the global values
-        self.host = config.get(CONF_HOST, "localhost")  # Default value for testing
-        self.port = config.get(CONF_PORT, DEFAULT_PORT)
-        self.name = config.get(CONF_NAME, f"{DEFAULT_NAME}-{self.host}")
-        self.auto_discover = config.get(CONF_AUTO_DISCOVER, False)
-        self.active = config.get(CONF_ACTIVE, CONF_ACTIVE_INIT)
-        if self.active is True:
-            self.active = CONF_ACTIVE_ON
-        if self.active is False:
-            self.active = CONF_ACTIVE_OFF
-        self.poll_timer = config.get(CONF_POLL_TIMER, 1.0)
-        self.default_fade = config.get(CONF_DEFAULT, {}).get(CONF_FADE, 0)
-        # create the templates
-        config_templates = config.get(CONF_TEMPLATE, {})
-        for template in DEFAULT_TEMPLATES:
-            self.template[template] = {}
-            cur_template = config_templates.get(template, {})
-            for conf in DEFAULT_TEMPLATES[template]:
-                self.template[template][conf] = cur_template.get(
-                    conf, DEFAULT_TEMPLATES[template][conf]
-                )
-        # create default presets
-        config_presets = config.get(CONF_PRESET, DEFAULT_PRESETS)
-        default_presets = {
-            int(preset): configure_preset(
-                preset, config_presets[preset], self.default_fade
-            )
-            for preset in config_presets
-        }
-        # create the areas with their channels and presets
-        self.area = {}
-        for area_val in config.get(CONF_AREA, {}):  # may be a string '123'
-            area = int(area_val)
-            area_config = config[CONF_AREA].get(area_val)
-            self.area[area] = configure_area(
-                area, area_config, self.default_fade, self.template, default_presets
-            )
-            # now register the channels and presets and ask for initial status if needed
+        self.host = configurator.host
+        self.port = configurator.port
+        self.name = configurator.name
+        self.auto_discover = configurator.auto_discover
+        self.active = configurator.active
+        self.poll_timer = configurator.poll_timer
+        self.default_fade = configurator.default_fade
+        self.area = configurator.area
+        # now register the channels and presets and ask for initial status if needed
+        for area in self.area:
             if self.active in [CONF_ACTIVE_INIT, CONF_ACTIVE_ON]:
                 self.dynalite.request_area_preset(area)
             for channel in self.area[area][CONF_CHANNEL]:
@@ -288,7 +250,7 @@ class DynaliteDevices:
         if CONF_PRESET not in area_config:
             area_config[CONF_PRESET] = {}
         if preset not in area_config[CONF_PRESET]:
-            area_config[CONF_PRESET][preset] = configure_preset(
+            area_config[CONF_PRESET][preset] = DynaliteConfig.configure_preset(
                 preset,
                 {},
                 area_config[CONF_FADE],
@@ -350,7 +312,7 @@ class DynaliteDevices:
         if CONF_CHANNEL not in area_config:
             area_config[CONF_CHANNEL] = {}
         if channel not in area_config[CONF_CHANNEL]:
-            area_config[CONF_CHANNEL][channel] = configure_channel(
+            area_config[CONF_CHANNEL][channel] = DynaliteConfig.configure_channel(
                 channel,
                 {},
                 area_config[CONF_FADE],
