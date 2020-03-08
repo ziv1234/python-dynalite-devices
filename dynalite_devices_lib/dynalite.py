@@ -36,25 +36,21 @@ class Dynalite:
 
     def __init__(self, broadcast_func):
         """Initialize the class."""
-        self.host = None
-        self.port = None
-        self.loop = None
-        self.broadcast_func = broadcast_func
+        self._loop = None
+        self._broadcast_func = broadcast_func
         self._in_buffer = []
         self._out_buffer = []
         self._last_sent = None
-        self.message_delay = 0.2
-        self.reader = None
-        self.writer = None
-        self.resetting = False
-        self.reader_future = None
+        self.message_delay = 0.2  # public for testing
+        self._reader = None
+        self._writer = None
+        self._resetting = False
+        self._reader_future = None
 
-    async def connect_internal(self):
+    async def connect_internal(self, host, port):
         """Create the actual connection to Dynet."""
         try:
-            self.reader, self.writer = await asyncio.open_connection(
-                self.host, self.port
-            )
+            self._reader, self._writer = await asyncio.open_connection(host, port)
             return True
         except (ValueError, OSError, asyncio.TimeoutError) as err:
             LOGGER.warning("Could not connect to Dynet (%s)", err)
@@ -62,40 +58,38 @@ class Dynalite:
 
     async def connect(self, host, port):
         """Connect to Dynet."""
-        self.host = host
-        self.port = port
         LOGGER.debug("Connecting to Dynet on %s:%s", host, port)
-        if not self.loop:
-            self.loop = asyncio.get_running_loop()
-        self.resetting = False
-        result = await self.connect_internal()
-        if result and not self.resetting:
-            self.reader_future = self.loop.create_task(self.reader_loop())
+        if not self._loop:
+            self._loop = asyncio.get_running_loop()
+        self._resetting = False
+        result = await self.connect_internal(host, port)
+        if result and not self._resetting:
+            self._reader_future = self._loop.create_task(self.reader_loop(host, port))
             self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
         return result
 
-    async def reader_loop(self):
+    async def reader_loop(self, host, port):
         """Loop to read from the stream reader and reconnect if necessary."""
         while True:
             self.write()  # write if there is something in the buffers
             try:
-                data = await self.reader.read(100)
+                data = await self._reader.read(100)
                 if len(data) > 0:
                     self.receive(data)
                     continue
             except ConnectionResetError:
                 pass
             # we got disconnected or EOF
-            if self.resetting:
-                self.reader = None
+            if self._resetting:
+                self._reader = None
                 return  # stop loop
-            self.reader = None
-            self.writer = None
+            self._reader = None
+            self._writer = None
             self.broadcast(DynetEvent(event_type=EVENT_DISCONNECTED, data={}))
             await asyncio.sleep(CONNECTION_RETRY_DELAY)  # Don't overload the network
-            while not await self.connect_internal():
-                if self.resetting:
-                    self.reader = None
+            while not await self.connect_internal(host, port):
+                if self._resetting:
+                    self._reader = None
                     return  # stop loop
                 await asyncio.sleep(
                     CONNECTION_RETRY_DELAY
@@ -104,7 +98,7 @@ class Dynalite:
 
     def broadcast(self, event):
         """Broadcast an event to all listeners - queue."""
-        self.loop.call_soon(self.broadcast_func, event)
+        self._loop.call_soon(self._broadcast_func, event)
 
     def set_channel_level(self, area, channel, level, fade):
         """Set the level of a channel."""
@@ -193,13 +187,13 @@ class Dynalite:
                 LOGGER.debug("Unhandled Dynet Inbound: %s", packet)
         # If there is still buffer to process - start again
         if len(self._in_buffer) >= 8:
-            self.loop.call_soon(self.receive)
+            self._loop.call_soon(self.receive)
 
     def write(self, new_packet=None):
         """Write a packet or trigger write loop."""
         if new_packet is not None:
             self._out_buffer.append(new_packet)
-        if self.writer is None:
+        if self._writer is None:
             LOGGER.debug("write before transport is ready. queuing")
             return
         if self.message_delay > 0:  # in testing it is set to 0
@@ -209,7 +203,7 @@ class Dynalite:
             elapsed = current_time - self._last_sent
             delay = self.message_delay - elapsed
             if delay > 0:
-                self.loop.call_later(delay, self.write)
+                self._loop.call_later(delay, self.write)
                 return
         if len(self._out_buffer) == 0:
             return
@@ -223,16 +217,16 @@ class Dynalite:
         msg.append(packet.data[2])
         msg.append(packet.join)
         msg.append(packet.chk)
-        self.writer.write(msg)
+        self._writer.write(msg)
         LOGGER.debug("Dynet Sent: %s", msg)
         self._last_sent = time.time()
         del self._out_buffer[0]
         if len(self._out_buffer) > 0:
-            self.loop.call_later(self.message_delay, self.write)
+            self._loop.call_later(self.message_delay, self.write)
 
     async def async_reset(self):
         """Close sockets and timers."""
-        self.resetting = True
+        self._resetting = True
         # Wait for reader to also close
-        if self.reader_future:
-            await self.reader_future
+        if self._reader_future:
+            await self._reader_future

@@ -250,8 +250,6 @@ class DynaliteDevices:
                 )
         self.ensure_area(area)
         area_config = self.area[area]
-        if CONF_PRESET not in area_config:
-            area_config[CONF_PRESET] = {}
         if preset not in area_config[CONF_PRESET]:
             area_config[CONF_PRESET][preset] = DynaliteConfig.configure_preset(
                 preset,
@@ -312,8 +310,6 @@ class DynaliteDevices:
                 )
         self.ensure_area(area)
         area_config = self.area[area]
-        if CONF_CHANNEL not in area_config:
-            area_config[CONF_CHANNEL] = {}
         if channel not in area_config[CONF_CHANNEL]:
             area_config[CONF_CHANNEL][channel] = DynaliteConfig.configure_channel(
                 channel,
