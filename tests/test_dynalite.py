@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_dynalite_disconnection(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test a network disconnection."""
     devices = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
@@ -44,7 +44,7 @@ async def test_dynalite_disconnection(mock_gateway):
 
 
 async def test_dynalite_connection_reset(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test a connection reset."""
     devices = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: True,
@@ -76,13 +76,13 @@ async def test_dynalite_connection_reset(mock_gateway):
 
 
 async def test_dynalite_no_server(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test when no server is configured."""
     mock_gateway.configure_dyn_dev({dyn_const.CONF_PORT: 12333}, 0)
     assert not await mock_gateway.async_setup_dyn_dev()
 
 
 async def test_dynalite_shutdown_with_server_down(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test when shutting down while the server is down. Different flow in async_reset."""
     [device] = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,

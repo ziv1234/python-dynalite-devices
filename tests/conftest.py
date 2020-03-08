@@ -25,6 +25,7 @@ class MockGateway:
         """Run the actual server."""
 
         async def handle_connection(reader, writer):
+            """Run a single session. Assumes only one for tests."""
             assert not self.reader and not self.writer
             self.reader = reader
             self.writer = writer
@@ -50,7 +51,7 @@ class MockGateway:
         await asyncio.sleep(0.01)
 
     async def check_writes(self, packets):
-        """Check that the set of writes was issued."""
+        """Check that a set of packets was written."""
         await asyncio.sleep(0.01)
         assert len(self.in_buffer) == len(packets) * 8
         received = [self.in_buffer[i * 8 : i * 8 + 8] for i in range(0, len(packets))]
@@ -59,7 +60,7 @@ class MockGateway:
         self.reset()
 
     async def check_single_write(self, packet):
-        """Check that there was only a single write issued."""
+        """Check that there was only a single packet written."""
         await self.check_writes([packet])
 
     async def receive_message(self, message):

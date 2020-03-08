@@ -11,7 +11,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_cover_no_tilt(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test basic cover functionality."""
     name = "NAME"
     [
         channel_device,
@@ -39,7 +39,7 @@ async def test_cover_no_tilt(mock_gateway):
         },
         5,
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     assert channel_device.category == "light"
     assert open_device.category == "switch"
     assert close_device.category == "switch"
@@ -163,7 +163,7 @@ async def test_cover_no_tilt(mock_gateway):
 
 
 async def test_cover_with_tilt(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test the cover tilt functionality."""
     name = "NAME"
     [cover_device] = mock_gateway.configure_dyn_dev(
         {
@@ -184,7 +184,7 @@ async def test_cover_with_tilt(mock_gateway):
             },
         }
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     assert cover_device.category == "cover"
     assert cover_device.device_class == "blind"
     assert cover_device.has_tilt
@@ -252,7 +252,7 @@ async def test_cover_with_tilt(mock_gateway):
 
 
 async def test_cover_no_channel(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test a cover without an associated channel."""
     name = "NAME"
     [cover_device] = mock_gateway.configure_dyn_dev(
         {
@@ -270,7 +270,7 @@ async def test_cover_no_channel(mock_gateway):
             },
         }
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     assert cover_device.category == "cover"
     # It is closed. Let's open
     assert cover_device.is_closed

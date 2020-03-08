@@ -17,12 +17,12 @@ async def test_empty_dynalite_devices(mock_gateway):
         },
         0,
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     await mock_gateway.check_writes([])
 
 
 async def test_dynalite_devices_active_on(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test with active set to ON."""
     mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: True,
@@ -31,7 +31,7 @@ async def test_dynalite_devices_active_on(mock_gateway):
         },
         3,
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     await mock_gateway.check_writes(
         [
             DynetPacket.request_channel_level_packet(1, 1),
@@ -49,7 +49,7 @@ async def test_dynalite_devices_active_on(mock_gateway):
 
 
 async def test_dynalite_devices_active_off(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test with active set to OFF."""
     mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
@@ -58,14 +58,14 @@ async def test_dynalite_devices_active_off(mock_gateway):
         },
         3,
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     await mock_gateway.check_writes([])
     await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
     await mock_gateway.check_writes([])
 
 
 async def test_dynalite_devices_active_init(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test with active set to INIT."""
     mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: dyn_const.CONF_ACTIVE_INIT,
@@ -74,7 +74,7 @@ async def test_dynalite_devices_active_init(mock_gateway):
         },
         3,
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     await mock_gateway.check_writes(
         [
             DynetPacket.request_channel_level_packet(1, 1),
@@ -87,7 +87,7 @@ async def test_dynalite_devices_active_init(mock_gateway):
 
 
 async def test_dynalite_devices_reconfig(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test reconfiguration."""
     config = {
         dyn_const.CONF_ACTIVE: False,
         dyn_const.CONF_AREA: {
@@ -98,19 +98,19 @@ async def test_dynalite_devices_reconfig(mock_gateway):
         dyn_const.CONF_PRESET: {"1": {}},
     }
     mock_gateway.configure_dyn_dev(config, 5)
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     mock_gateway.configure_dyn_dev(config, 0)
 
 
 async def test_dynalite_devices_auto_discover_on(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test autodiscover ON."""
     config = {
         dyn_const.CONF_ACTIVE: False,
         dyn_const.CONF_AUTO_DISCOVER: True,
         dyn_const.CONF_AREA: {},
     }
     mock_gateway.configure_dyn_dev(config, 0)
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     func = mock_gateway.dyn_dev.new_dev_func
     func.reset_mock()
     await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
@@ -127,14 +127,14 @@ async def test_dynalite_devices_auto_discover_on(mock_gateway):
 
 
 async def test_dynalite_devices_auto_discover_off(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test autodiscover OFF."""
     config = {
         dyn_const.CONF_ACTIVE: False,
         dyn_const.CONF_AUTO_DISCOVER: False,
         dyn_const.CONF_AREA: {},
     }
     mock_gateway.configure_dyn_dev(config, 0)
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     func = mock_gateway.dyn_dev.new_dev_func
     func.reset_mock()
     await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
@@ -144,7 +144,7 @@ async def test_dynalite_devices_auto_discover_off(mock_gateway):
 
 
 async def test_dynalite_devices_auto_discover_template(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test auto discover ON when running into a template that shouldn't show the device."""
     config = {
         dyn_const.CONF_ACTIVE: False,
         dyn_const.CONF_AUTO_DISCOVER: True,
@@ -154,7 +154,7 @@ async def test_dynalite_devices_auto_discover_template(mock_gateway):
         },
     }
     mock_gateway.configure_dyn_dev(config, 2)
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     func = mock_gateway.dyn_dev.new_dev_func
     func.reset_mock()
     await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 2))
@@ -164,7 +164,7 @@ async def test_dynalite_devices_auto_discover_template(mock_gateway):
 
 
 async def test_dynalite_devices_unknown_channel_type(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test when config has a wrong channel type."""
     mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
@@ -177,12 +177,12 @@ async def test_dynalite_devices_unknown_channel_type(mock_gateway):
         },
         0,
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     await mock_gateway.check_writes([])
 
 
 async def test_dynalite_devices_area_override(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test that area overrides work."""
     name = "aaa"
     override_name = "bbb"
     [device] = mock_gateway.configure_dyn_dev(
@@ -204,7 +204,7 @@ async def test_dynalite_devices_area_override(mock_gateway):
 
 
 async def test_dynalite_devices_reconfig_with_missing(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test reconfiguration with fewer devices and see that they are not available."""
     [device] = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
@@ -213,10 +213,7 @@ async def test_dynalite_devices_reconfig_with_missing(mock_gateway):
         },
         1,
     )
-    await mock_gateway.async_setup_dyn_dev()
-    import asyncio
-
-    await asyncio.sleep(0.1)
+    assert await mock_gateway.async_setup_dyn_dev()
     assert device.available
     assert device.name == "Area 1 Channel 1"
     assert device.unique_id == "dynalite_area_1_channel_1"

@@ -10,7 +10,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_preset_switch(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test a Dynalite preset."""
     name = "NAME"
     preset_name = "PRESET"
     [device1, device4] = mock_gateway.configure_dyn_dev(
@@ -32,7 +32,7 @@ async def test_preset_switch(mock_gateway):
         },
         2,
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     assert device1.category == "switch"
     assert device4.category == "switch"
     assert device1.name == f"{name} {preset_name}"
@@ -65,7 +65,7 @@ async def test_preset_switch(mock_gateway):
 
 
 async def test_channel_switch(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test a Dynalite channel that is a switch."""
     name = "NAME"
     [device] = mock_gateway.configure_dyn_dev(
         {
@@ -84,7 +84,7 @@ async def test_channel_switch(mock_gateway):
             },
         }
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     assert device.category == "switch"
     assert device.name == f"{name} Channel 1"
     assert device.unique_id == "dynalite_area_1_channel_1"
@@ -104,7 +104,7 @@ async def test_channel_switch(mock_gateway):
 
 
 async def test_room_switch(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test a room switch with two presets."""
     name = "NAME"
     [on_device, off_device, room_device] = mock_gateway.configure_dyn_dev(
         {
@@ -119,7 +119,7 @@ async def test_room_switch(mock_gateway):
         },
         3,
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     for device in [on_device, off_device, room_device]:
         assert device.category == "switch"
     assert room_device.name == name

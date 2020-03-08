@@ -8,7 +8,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_light(mock_gateway):
-    """Test the dynalite devices library."""
+    """Test a Dynalite channel that is a light."""
     name = "NAME"
     channel_name = "CHANNEL"
     [device] = mock_gateway.configure_dyn_dev(
@@ -28,7 +28,7 @@ async def test_light(mock_gateway):
             },
         }
     )
-    await mock_gateway.async_setup_dyn_dev()
+    assert await mock_gateway.async_setup_dyn_dev()
     assert device.category == "light"
     assert device.name == f"{name} {channel_name}"
     assert device.unique_id == "dynalite_area_1_channel_1"
