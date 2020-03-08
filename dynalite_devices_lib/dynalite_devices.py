@@ -2,7 +2,7 @@
 
 import asyncio
 
-from .area_config import configure_area, configure_preset
+from .area_config import configure_area, configure_channel, configure_preset
 from .const import (
     CONF_ACT_LEVEL,
     CONF_ACTION,
@@ -288,10 +288,12 @@ class DynaliteDevices:
         if CONF_PRESET not in area_config:
             area_config[CONF_PRESET] = {}
         if preset not in area_config[CONF_PRESET]:
-            area_config[CONF_PRESET][preset] = {
-                CONF_NAME: f"Preset {preset}",
-                CONF_FADE: area_config[CONF_FADE],
-            }
+            area_config[CONF_PRESET][preset] = configure_preset(
+                preset,
+                {},
+                area_config[CONF_FADE],
+                area_config.get(CONF_TEMPLATE, False),
+            )
             # if the area is a template is a template, new presets should be hidden
             if area_config.get(CONF_TEMPLATE, False):
                 area_config[CONF_PRESET][preset][CONF_HIDDEN_ENTITY] = True
@@ -348,13 +350,12 @@ class DynaliteDevices:
         if CONF_CHANNEL not in area_config:
             area_config[CONF_CHANNEL] = {}
         if channel not in area_config[CONF_CHANNEL]:
-            area_config[CONF_CHANNEL][channel] = {
-                CONF_NAME: f"Channel {channel}",
-                CONF_FADE: area_config[CONF_FADE],
-            }
-            # if the area is a template is a template, new channels should be hidden
-            if area_config.get(CONF_TEMPLATE, False):
-                area_config[CONF_CHANNEL][channel][CONF_HIDDEN_ENTITY] = True
+            area_config[CONF_CHANNEL][channel] = configure_channel(
+                channel,
+                {},
+                area_config[CONF_FADE],
+                area_config.get(CONF_TEMPLATE, False),
+            )
         channel_config = area_config[CONF_CHANNEL][channel]
         LOGGER.debug("create_channel_if_new - channel_config=%s", channel_config)
         channel_type = channel_config.get(
