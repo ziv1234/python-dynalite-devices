@@ -2,6 +2,7 @@
 
 import asyncio
 
+from .area_config import configure_area
 from .const import (
     CONF_ACT_LEVEL,
     CONF_ACTION,
@@ -27,7 +28,6 @@ from .const import (
     CONF_HIDDEN_ENTITY,
     CONF_HOST,
     CONF_NAME,
-    CONF_NO_DEFAULT,
     CONF_NONE,
     CONF_OPEN_PRESET,
     CONF_POLL_TIMER,
@@ -41,7 +41,6 @@ from .const import (
     CONF_TILT_TIME,
     CONF_TIME_COVER,
     CONF_TRGT_LEVEL,
-    CONF_TRIGGER,
     DEFAULT_CHANNEL_TYPE,
     DEFAULT_NAME,
     DEFAULT_PORT,
@@ -151,88 +150,17 @@ class DynaliteDevices:
         for area_val in config.get(CONF_AREA, {}):  # may be a string '123'
             area = int(area_val)
             area_config = config[CONF_AREA].get(area_val)
-            self.area[area] = {
-                CONF_NAME: area_config.get(CONF_NAME, f"Area {area}"),
-                CONF_FADE: area_config.get(CONF_FADE, self.default_fade),
-            }
-            for conf in [CONF_TEMPLATE, CONF_AREA_OVERRIDE]:
-                if conf in area_config:
-                    self.area[area][conf] = area_config[conf]
-            area_presets = {}
-            area_channels = {}
-            # User defined presets and channels first, then template presets, then defaults
-            for preset in area_config.get(CONF_PRESET, {}):
-                preset_config = area_config[CONF_PRESET][preset]
-                area_presets[int(preset)] = {
-                    CONF_NAME: preset_config.get(CONF_NAME, f"Preset {preset}"),
-                    CONF_FADE: preset_config.get(CONF_FADE, self.area[area][CONF_FADE]),
-                }
-            for channel in area_config.get(CONF_CHANNEL, {}):
-                channel_config = area_config[CONF_CHANNEL][channel]
-                area_channels[int(channel)] = {
-                    CONF_NAME: channel_config.get(CONF_NAME, f"Channel {channel}"),
-                    CONF_FADE: channel_config.get(
-                        CONF_FADE, self.area[area][CONF_FADE]
-                    ),
-                    CONF_CHANNEL_TYPE: channel_config.get(
-                        CONF_CHANNEL_TYPE, DEFAULT_CHANNEL_TYPE
-                    ),
-                }
-            # add the entities implicitly defined by templates
-            template = area_config.get(CONF_TEMPLATE)
-            if template:
-                # Which type of value is a specific CONF
-                conf_presets = [
-                    CONF_ROOM_ON,
-                    CONF_ROOM_OFF,
-                    CONF_TRIGGER,
-                    CONF_OPEN_PRESET,
-                    CONF_CLOSE_PRESET,
-                    CONF_STOP_PRESET,
-                ]
-                conf_values = [CONF_DEVICE_CLASS, CONF_DURATION, CONF_TILT_TIME]
-                conf_channels = [CONF_CHANNEL_COVER]
-                for conf in self.template[template]:
-                    conf_value = area_config.get(conf, self.template[template][conf])
-                    if conf in conf_presets:
-                        preset = int(conf_value)
-                        if preset not in area_presets:
-                            area_presets[preset] = {
-                                CONF_NAME: f"Preset {preset}",
-                                CONF_FADE: self.area[area][CONF_FADE],
-                                # Trigger is the only exception
-                                CONF_HIDDEN_ENTITY: (template != CONF_TRIGGER),
-                            }
-                        self.area[area][conf] = preset
-                    elif conf in conf_channels:
-                        channel = int(conf_value)
-                        if 0 < channel < 255:
-                            if channel not in area_channels:
-                                area_channels[channel] = {
-                                    CONF_NAME: f"Channel {channel}",
-                                    CONF_FADE: self.area[area][CONF_FADE],
-                                    CONF_HIDDEN_ENTITY: True,
-                                }
-                        self.area[area][conf] = channel
-                    else:
-                        assert conf in conf_values
-                        self.area[area][conf] = conf_value
-                area_config[CONF_NO_DEFAULT] = True
-            # Default presets
-            if not area_config.get(CONF_NO_DEFAULT, False):
-                for preset in default_presets:
-                    if preset not in area_presets:
-                        area_presets[preset] = default_presets[preset]
-            self.area[area][CONF_PRESET] = area_presets
-            self.area[area][CONF_CHANNEL] = area_channels
+            self.area[area] = configure_area(
+                area, area_config, self.default_fade, self.template, default_presets
+            )
             # now register the channels and presets and ask for initial status if needed
             if self.active in [CONF_ACTIVE_INIT, CONF_ACTIVE_ON]:
                 self.dynalite.request_area_preset(area)
-            for channel in area_channels:
+            for channel in self.area[area][CONF_CHANNEL]:
                 self.create_channel_if_new(area, channel)
                 if self.active in [CONF_ACTIVE_INIT, CONF_ACTIVE_ON]:
                     self.dynalite.request_channel_level(area, channel)
-            for preset in area_presets:
+            for preset in self.area[area][CONF_PRESET]:
                 self.create_preset_if_new(area, preset)
 
         # register the rooms (switches on presets 1/4)
