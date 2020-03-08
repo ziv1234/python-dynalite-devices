@@ -2,7 +2,7 @@
 
 import asyncio
 
-from .area_config import configure_area
+from .area_config import configure_area, configure_preset
 from .const import (
     CONF_ACT_LEVEL,
     CONF_ACTION,
@@ -138,13 +138,12 @@ class DynaliteDevices:
                 )
         # create default presets
         config_presets = config.get(CONF_PRESET, DEFAULT_PRESETS)
-        default_presets = {}
-        for preset in config_presets:
-            cur_config = config_presets[preset]
-            default_presets[int(preset)] = {
-                CONF_NAME: cur_config.get(CONF_NAME, f"Preset {preset}"),
-                CONF_FADE: cur_config.get(CONF_FADE, self.default_fade),
-            }
+        default_presets = {
+            int(preset): configure_preset(
+                preset, config_presets[preset], self.default_fade
+            )
+            for preset in config_presets
+        }
         # create the areas with their channels and presets
         self.area = {}
         for area_val in config.get(CONF_AREA, {}):  # may be a string '123'
@@ -162,7 +161,6 @@ class DynaliteDevices:
                     self.dynalite.request_channel_level(area, channel)
             for preset in self.area[area][CONF_PRESET]:
                 self.create_preset_if_new(area, preset)
-
         # register the rooms (switches on presets 1/4)
         # all the devices should be created for channels and presets
         self.register_rooms()
