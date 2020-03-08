@@ -8,10 +8,11 @@ from .dynalitebase import DynaliteMultiDevice
 class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover."""
 
-    def __init__(self, area, bridge):
+    def __init__(self, area, bridge, poll_timer):
         """Initialize the cover."""
         self._current_position = 0
         self._direction = "stop"
+        self._poll_timer = poll_timer
         super().__init__(4, area, bridge)
 
     @property
@@ -52,18 +53,17 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     def timer_callback(self):
         """Update the progress of open and close."""
         duration = self._bridge.get_cover_duration(self._area)
-        poll_timer = self._bridge.poll_timer
         assert self._direction in ["open", "close"]
         if self._direction == "open":
-            self._current_position += poll_timer / duration
-            getattr(self, "update_tilt", int)(poll_timer)
+            self._current_position += self._poll_timer / duration
+            getattr(self, "update_tilt", int)(self._poll_timer)
             if self._current_position >= 1.0:
                 self._current_position = 1.0
                 self._direction = "stop"
                 self._bridge.remove_timer_listener(self.timer_callback)
         elif self._direction == "close":
-            self._current_position -= poll_timer / duration
-            getattr(self, "update_tilt", int)(poll_timer)
+            self._current_position -= self._poll_timer / duration
+            getattr(self, "update_tilt", int)(self._poll_timer)
             if self._current_position <= 0.0:
                 self._current_position = 0.0
                 self._direction = "stop"
@@ -104,26 +104,25 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         """Set the cover to a specific position."""
         target_position = kwargs[ATTR_POSITION] / 100
         position_diff = target_position - self._current_position
-        poll_timer = self._bridge.poll_timer
         if position_diff > 0.001:
             await self.async_open_cover()
             while (
                 self._current_position < target_position and self._direction == "open"
             ):
-                await asyncio.sleep(poll_timer)
+                await asyncio.sleep(self._poll_timer)
             if self._direction == "open":
                 await self.async_stop_cover()
-                await asyncio.sleep(poll_timer)  # doing twice for safety
+                await asyncio.sleep(self._poll_timer)  # doing twice for safety
                 await self.async_stop_cover()
         elif position_diff < -0.001:
             await self.async_close_cover()
             while (
                 self._current_position > target_position and self._direction == "close"
             ):
-                await asyncio.sleep(poll_timer)
+                await asyncio.sleep(self._poll_timer)
             if self._direction == "close":
                 await self.async_stop_cover()
-                await asyncio.sleep(poll_timer)  # doing twice for safety
+                await asyncio.sleep(self._poll_timer)  # doing twice for safety
                 await self.async_stop_cover()
         else:
             await self.async_stop_cover()
@@ -157,10 +156,10 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
 class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover that uses up and down for tilt."""
 
-    def __init__(self, area, bridge):
+    def __init__(self, area, bridge, poll_timer):
         """Initialize the cover."""
         self._current_tilt = 0
-        super().__init__(area, bridge)
+        super().__init__(area, bridge, poll_timer)
 
     @property
     def has_tilt(self):
