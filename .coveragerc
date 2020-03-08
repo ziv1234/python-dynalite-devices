@@ -1,7 +1,7 @@
 [run]
 source = dynalite_devices_lib/
 data_file = /home/ziv/dyn_dev/.coverage
-omit =
+omit = dynalite_devices_lib/__version__.py
 
 [report]
 # Regexes for lines to exclude from consideration
