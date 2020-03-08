@@ -231,7 +231,10 @@ class DynaliteDevices:
         """Configure a default area if it is not yet in config."""
         if area not in self.area:
             LOGGER.debug("adding area %s that is not in config", area)
-            self.area[area] = {CONF_NAME: f"Area {area}", CONF_FADE: self.default_fade}
+            # consider adding default presets to new areas (XXX)
+            self.area[area] = DynaliteConfig.configure_area(
+                area, {}, self.default_fade, {}, {}
+            )
 
     def create_preset_if_new(self, area, preset):
         """Register a new preset."""

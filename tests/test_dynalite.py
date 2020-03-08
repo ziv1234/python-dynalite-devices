@@ -62,9 +62,7 @@ async def test_dynalite_connection_reset(mock_gateway):
         assert device.available
     # Disconnect
     with patch("dynalite_devices_lib.dynalite.CONNECTION_RETRY_DELAY", 0.1):
-        # Ugly, but the only way I found to reset a connection was to close the
-        # writer. Couldn't find a way to do it from the remote server.
-        # writer = device._bridge.dynalite.writer XXX
+        # abort instead of close causes the connection to be reset
         writer = mock_gateway.writer
         writer.transport.abort()
         await mock_gateway.shutdown()

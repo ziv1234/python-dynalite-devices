@@ -201,39 +201,3 @@ class DynetInbound:
                 CONF_JOIN: packet.join,
             },
         )
-
-    # def fade_channel_area_to_preset(self, packet): XXX
-    # """Report that a channel or area was set to a preset."""
-    # channel = packet.data[0] + 1
-    # packet.preset = packet.data[1] + 1
-    # packet.fade = packet.data[2] * 0.02
-    # if channel == 256:  # all channels in area
-    # return DynetEvent(
-    # event_type=EVENT_PRESET,
-    # message=(
-    # "Current Area %d Preset is %d fade %s"
-    # % (packet.area, packet.preset, packet.fade)
-    # ),
-    # data={
-    # CONF_AREA: packet.area,
-    # CONF_PRESET: packet.preset,
-    # CONF_FADE: packet.fade,
-    # CONF_JOIN: packet.join,
-    # },
-    # )
-    # else:
-    # return DynetEvent(
-    # event_type=EVENT_CHANNEL,
-    # message=(
-    # "Area %d Channel %s preset %s fade %s"
-    # % (packet.area, channel, packet.preset, packet.fade)
-    # ),
-    # data={
-    # CONF_AREA: packet.area,
-    # CONF_CHANNEL: channel,
-    # CONF_FADE: packet.fade,
-    # CONF_ACTION: CONF_ACTION_CMD,
-    # CONF_PRESET: packet.preset,
-    # CONF_JOIN: packet.join,
-    # },
-    # )

@@ -26,13 +26,12 @@ class MockGateway:
 
         async def handle_connection(reader, writer):
             assert not self.reader and not self.writer
-            dyn_const.LOGGER.error("XXX here")
             self.reader = reader
             self.writer = writer
             while not reader.at_eof():
                 data = await reader.read(100)
                 addr = writer.get_extra_info("peername")
-                dyn_const.LOGGER.error(
+                dyn_const.LOGGER.debug(
                     "Received message from %s - %s", addr, [int(byte) for byte in data]
                 )
                 for byte in data:
@@ -41,7 +40,7 @@ class MockGateway:
 
         self.server = await asyncio.start_server(handle_connection, "127.0.0.1", 12345)
         addr = self.server.sockets[0].getsockname()
-        dyn_const.LOGGER.error("Serving on %s", addr)
+        dyn_const.LOGGER.debug("Serving on %s", addr)
         async with self.server:
             await self.server.serve_forever()
 
@@ -133,7 +132,6 @@ async def mock_gateway(request):
 
     async def async_fin():
         """Shut the gateway down."""
-        dyn_const.LOGGER.error("AAA - here")
         await gateway.shutdown()
         await gateway.dyn_dev.dyn_dev.async_reset()
 
