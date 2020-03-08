@@ -111,7 +111,7 @@ async def test_dynalite_devices_auto_discover_on(mock_gateway):
     }
     mock_gateway.configure_dyn_dev(config, 0)
     assert await mock_gateway.async_setup_dyn_dev()
-    func = mock_gateway.dyn_dev.new_dev_func
+    func = mock_gateway.new_dev_func
     func.reset_mock()
     await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
     func.assert_called_once()
@@ -135,7 +135,7 @@ async def test_dynalite_devices_auto_discover_off(mock_gateway):
     }
     mock_gateway.configure_dyn_dev(config, 0)
     assert await mock_gateway.async_setup_dyn_dev()
-    func = mock_gateway.dyn_dev.new_dev_func
+    func = mock_gateway.new_dev_func
     func.reset_mock()
     await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
     func.assert_not_called()
@@ -155,7 +155,7 @@ async def test_dynalite_devices_auto_discover_template(mock_gateway):
     }
     mock_gateway.configure_dyn_dev(config, 2)
     assert await mock_gateway.async_setup_dyn_dev()
-    func = mock_gateway.dyn_dev.new_dev_func
+    func = mock_gateway.new_dev_func
     func.reset_mock()
     await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 2))
     func.assert_not_called()
