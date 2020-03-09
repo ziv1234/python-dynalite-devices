@@ -1,0 +1,6 @@
+pytest
+pytest-cov
+pytest-asyncio
+asynctest
+pre-commit
+pylint_strict_informational
