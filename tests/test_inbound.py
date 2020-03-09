@@ -6,9 +6,8 @@ import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynet import DynetPacket
 from dynalite_devices_lib.opcodes import OpcodeType
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 async def run_selections(mock_gateway, conf, packet_func):
     """Run preset / channel selection tests with various commands."""
     devices = mock_gateway.configure_dyn_dev(
@@ -31,6 +30,7 @@ async def run_selections(mock_gateway, conf, packet_func):
                 assert devices[j - 1].is_on == (i == j)
 
 
+@pytest.mark.asyncio
 async def test_inbound_presets(mock_gateway):
     """Test when various presets are selected."""
 
@@ -41,6 +41,7 @@ async def test_inbound_presets(mock_gateway):
     await run_selections(mock_gateway, dyn_const.CONF_PRESET, select_func)
 
 
+@pytest.mark.asyncio
 async def test_inbound_linear_presets(mock_gateway):
     """Test when various presets are selected with the linear preset command."""
 
@@ -53,6 +54,7 @@ async def test_inbound_linear_presets(mock_gateway):
     await run_selections(mock_gateway, dyn_const.CONF_PRESET, linear_func)
 
 
+@pytest.mark.asyncio
 async def test_inbound_report(mock_gateway):
     """Test when various presets are reported as selected."""
 
@@ -63,6 +65,7 @@ async def test_inbound_report(mock_gateway):
     await run_selections(mock_gateway, dyn_const.CONF_PRESET, report_func)
 
 
+@pytest.mark.asyncio
 async def test_inbound_set_channel(mock_gateway):
     """Test when various channels are turned on."""
 
@@ -73,6 +76,7 @@ async def test_inbound_set_channel(mock_gateway):
     await run_selections(mock_gateway, dyn_const.CONF_CHANNEL, set_channel_func)
 
 
+@pytest.mark.asyncio
 async def test_inbound_reported_channel(mock_gateway):
     """Test when various channels are reported as on."""
 
@@ -83,6 +87,7 @@ async def test_inbound_reported_channel(mock_gateway):
     await run_selections(mock_gateway, dyn_const.CONF_CHANNEL, report_channel_func)
 
 
+@pytest.mark.asyncio
 async def test_inbound_request_channel_level(mock_gateway):
     """Test when the network requests a channel level. Nothing to do, just be sure nothing bad happens..."""
     [device] = mock_gateway.configure_dyn_dev(

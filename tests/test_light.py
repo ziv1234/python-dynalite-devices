@@ -4,9 +4,8 @@ import pytest
 import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynet import DynetPacket
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 async def test_light(mock_gateway):
     """Test a Dynalite channel that is a light."""
     name = "NAME"

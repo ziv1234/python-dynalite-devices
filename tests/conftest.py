@@ -7,8 +7,6 @@ import pytest
 import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynalite_devices import DynaliteDevices
 
-pytestmark = pytest.mark.asyncio
-
 
 class MockGateway:
     """Class to mock a TCP gateway."""

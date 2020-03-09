@@ -6,9 +6,8 @@ import pytest
 import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynet import DynetPacket
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 async def test_preset_switch(mock_gateway):
     """Test a Dynalite preset."""
     name = "NAME"
@@ -64,6 +63,7 @@ async def test_preset_switch(mock_gateway):
     assert not device1.is_on
 
 
+@pytest.mark.asyncio
 async def test_channel_switch(mock_gateway):
     """Test a Dynalite channel that is a switch."""
     name = "NAME"
@@ -103,6 +103,7 @@ async def test_channel_switch(mock_gateway):
     assert not device.is_on
 
 
+@pytest.mark.asyncio
 async def test_room_switch(mock_gateway):
     """Test a room switch with two presets."""
     name = "NAME"

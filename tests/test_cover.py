@@ -7,9 +7,8 @@ import pytest
 import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynet import DynetPacket
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 async def test_cover_no_tilt(mock_gateway):
     """Test basic cover functionality."""
     name = "NAME"
@@ -162,6 +161,7 @@ async def test_cover_no_tilt(mock_gateway):
     assert not cover_device.is_closing
 
 
+@pytest.mark.asyncio
 async def test_cover_with_tilt(mock_gateway):
     """Test the cover tilt functionality."""
     name = "NAME"
@@ -251,6 +251,7 @@ async def test_cover_with_tilt(mock_gateway):
     assert 30 < cover_device.current_cover_tilt_position < 70
 
 
+@pytest.mark.asyncio
 async def test_cover_no_channel(mock_gateway):
     """Test a cover without an associated channel."""
     name = "NAME"

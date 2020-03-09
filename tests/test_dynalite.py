@@ -9,9 +9,8 @@ import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynet import DynetPacket
 from dynalite_devices_lib.opcodes import SyncType
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 async def test_dynalite_disconnection(mock_gateway):
     """Test a network disconnection."""
     devices = mock_gateway.configure_dyn_dev(
@@ -43,6 +42,7 @@ async def test_dynalite_disconnection(mock_gateway):
             assert device.available
 
 
+@pytest.mark.asyncio
 async def test_dynalite_connection_reset(mock_gateway):
     """Test a connection reset."""
     devices = mock_gateway.configure_dyn_dev(
@@ -75,12 +75,14 @@ async def test_dynalite_connection_reset(mock_gateway):
             assert device.available
 
 
+@pytest.mark.asyncio
 async def test_dynalite_no_server(mock_gateway):
     """Test when no server is configured."""
     mock_gateway.configure_dyn_dev({dyn_const.CONF_PORT: 12333}, 0)
     assert not await mock_gateway.async_setup_dyn_dev()
 
 
+@pytest.mark.asyncio
 async def test_dynalite_shutdown_with_server_down(mock_gateway):
     """Test when shutting down while the server is down. Different flow in async_reset."""
     [device] = mock_gateway.configure_dyn_dev(
@@ -98,6 +100,7 @@ async def test_dynalite_shutdown_with_server_down(mock_gateway):
     assert not device.available
 
 
+@pytest.mark.asyncio
 async def test_dynalite_split_message(mock_gateway):
     """Test when a received message is split into two packets."""
     [device] = mock_gateway.configure_dyn_dev(
@@ -117,6 +120,7 @@ async def test_dynalite_split_message(mock_gateway):
     assert device.is_on
 
 
+@pytest.mark.asyncio
 async def test_dynalite_shift_message(mock_gateway):
     """Test when a received message arrives out of the normal 8bit pattern."""
     [device] = mock_gateway.configure_dyn_dev(
@@ -134,6 +138,7 @@ async def test_dynalite_shift_message(mock_gateway):
     assert device.is_on
 
 
+@pytest.mark.asyncio
 async def test_dynalite_debug_message(mock_gateway):
     """Test when a DEBUG message arrives."""
     [device] = mock_gateway.configure_dyn_dev(
@@ -155,6 +160,7 @@ async def test_dynalite_debug_message(mock_gateway):
     assert device.is_on
 
 
+@pytest.mark.asyncio
 async def test_dynalite_device_message(mock_gateway):
     """Test when a DEVICE message arrives."""
     [device] = mock_gateway.configure_dyn_dev(
@@ -176,6 +182,7 @@ async def test_dynalite_device_message(mock_gateway):
     assert device.is_on
 
 
+@pytest.mark.asyncio
 async def test_dynalite_error_message(mock_gateway):
     """Test when a message arrives with the wrong checksum."""
     [device] = mock_gateway.configure_dyn_dev(
@@ -196,6 +203,7 @@ async def test_dynalite_error_message(mock_gateway):
     assert device.is_on
 
 
+@pytest.mark.asyncio
 async def test_dynalite_unhandled_message(mock_gateway):
     """Test when a message arrives that we know but don't handle."""
     [device] = mock_gateway.configure_dyn_dev(
@@ -215,6 +223,7 @@ async def test_dynalite_unhandled_message(mock_gateway):
     assert device.is_on
 
 
+@pytest.mark.asyncio
 async def test_dynalite_unknown_message(mock_gateway):
     """Test when a message arrives that we don't know."""
     [device] = mock_gateway.configure_dyn_dev(
@@ -234,6 +243,7 @@ async def test_dynalite_unknown_message(mock_gateway):
     assert device.is_on
 
 
+@pytest.mark.asyncio
 async def test_dynalite_two_messages(mock_gateway):
     """Test when two messages arrive together."""
     devices = mock_gateway.configure_dyn_dev(
@@ -254,6 +264,7 @@ async def test_dynalite_two_messages(mock_gateway):
         assert device.is_on
 
 
+@pytest.mark.asyncio
 async def test_dynalite_write_message_throttle(mock_gateway_with_delay):
     """Test that when we send many messages, it throttles the messages."""
     mock_gateway_with_delay.configure_dyn_dev(

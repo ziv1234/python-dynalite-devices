@@ -5,9 +5,8 @@ import pytest
 import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynet import DynetPacket
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 async def test_empty_dynalite_devices(mock_gateway):
     """Test the dynalite devices library with no devices."""
     mock_gateway.configure_dyn_dev(
@@ -21,6 +20,7 @@ async def test_empty_dynalite_devices(mock_gateway):
     await mock_gateway.check_writes([])
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_active_on(mock_gateway):
     """Test with active set to ON."""
     mock_gateway.configure_dyn_dev(
@@ -48,6 +48,7 @@ async def test_dynalite_devices_active_on(mock_gateway):
     )
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_active_off(mock_gateway):
     """Test with active set to OFF."""
     mock_gateway.configure_dyn_dev(
@@ -64,6 +65,7 @@ async def test_dynalite_devices_active_off(mock_gateway):
     await mock_gateway.check_writes([])
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_active_init(mock_gateway):
     """Test with active set to INIT."""
     mock_gateway.configure_dyn_dev(
@@ -86,6 +88,7 @@ async def test_dynalite_devices_active_init(mock_gateway):
     await mock_gateway.check_writes([])
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_reconfig(mock_gateway):
     """Test reconfiguration."""
     config = {
@@ -102,6 +105,7 @@ async def test_dynalite_devices_reconfig(mock_gateway):
     mock_gateway.configure_dyn_dev(config, 0)
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_auto_discover_on(mock_gateway):
     """Test autodiscover ON."""
     config = {
@@ -126,6 +130,7 @@ async def test_dynalite_devices_auto_discover_on(mock_gateway):
     assert devices[0].unique_id == "dynalite_area_2_channel_3"
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_auto_discover_off(mock_gateway):
     """Test autodiscover OFF."""
     config = {
@@ -143,6 +148,7 @@ async def test_dynalite_devices_auto_discover_off(mock_gateway):
     func.assert_not_called()
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_auto_discover_template(mock_gateway):
     """Test auto discover ON when running into a template that shouldn't show the device."""
     config = {
@@ -163,6 +169,7 @@ async def test_dynalite_devices_auto_discover_template(mock_gateway):
     func.assert_not_called()
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_unknown_channel_type(mock_gateway):
     """Test when config has a wrong channel type."""
     mock_gateway.configure_dyn_dev(
@@ -181,6 +188,7 @@ async def test_dynalite_devices_unknown_channel_type(mock_gateway):
     await mock_gateway.check_writes([])
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_area_override(mock_gateway):
     """Test that area overrides work."""
     name = "aaa"
@@ -203,6 +211,7 @@ async def test_dynalite_devices_area_override(mock_gateway):
     assert device.get_master_area == override_name
 
 
+@pytest.mark.asyncio
 async def test_dynalite_devices_reconfig_with_missing(mock_gateway):
     """Test reconfiguration with fewer devices and see that they are not available."""
     [device] = mock_gateway.configure_dyn_dev(
