@@ -19,78 +19,40 @@ async def test_empty_dynalite_devices(mock_gateway):
     assert await mock_gateway.async_setup_dyn_dev()
     await mock_gateway.check_writes([])
 
-
 @pytest.mark.asyncio
-async def test_dynalite_devices_active_on(mock_gateway):
+@pytest.mark.parametrize("active", [False, dyn_const.CONF_ACTIVE_INIT, True])
+async def test_dynalite_devices_active(mock_gateway, active):
     """Test with active set to ON."""
     mock_gateway.configure_dyn_dev(
         {
-            dyn_const.CONF_ACTIVE: True,
+            dyn_const.CONF_ACTIVE: active,
             dyn_const.CONF_AREA: {"1": {dyn_const.CONF_CHANNEL: {"1": {}, "2": {}}}},
             dyn_const.CONF_PRESET: {"1": {}},
         },
         3,
     )
     assert await mock_gateway.async_setup_dyn_dev()
-    await mock_gateway.check_writes(
-        [
+    if active is not False:
+        await mock_gateway.check_writes([
             DynetPacket.request_channel_level_packet(1, 1),
             DynetPacket.request_channel_level_packet(1, 2),
             DynetPacket.request_area_preset_packet(1),
-        ]
-    )
+        ])
+    else:
+        await mock_gateway.check_writes([])
     await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
-    await mock_gateway.check_writes(
-        [
+    if active is True:
+        await mock_gateway.check_writes([
             DynetPacket.request_channel_level_packet(1, 1),
             DynetPacket.request_channel_level_packet(1, 2),
-        ]
-    )
-
-
-@pytest.mark.asyncio
-async def test_dynalite_devices_active_off(mock_gateway):
-    """Test with active set to OFF."""
-    mock_gateway.configure_dyn_dev(
-        {
-            dyn_const.CONF_ACTIVE: False,
-            dyn_const.CONF_AREA: {"1": {dyn_const.CONF_CHANNEL: {"1": {}, "2": {}}}},
-            dyn_const.CONF_PRESET: {"1": {}},
-        },
-        3,
-    )
-    assert await mock_gateway.async_setup_dyn_dev()
-    await mock_gateway.check_writes([])
-    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
-    await mock_gateway.check_writes([])
-
-
-@pytest.mark.asyncio
-async def test_dynalite_devices_active_init(mock_gateway):
-    """Test with active set to INIT."""
-    mock_gateway.configure_dyn_dev(
-        {
-            dyn_const.CONF_ACTIVE: dyn_const.CONF_ACTIVE_INIT,
-            dyn_const.CONF_AREA: {"1": {dyn_const.CONF_CHANNEL: {"1": {}, "2": {}}}},
-            dyn_const.CONF_PRESET: {"1": {}},
-        },
-        3,
-    )
-    assert await mock_gateway.async_setup_dyn_dev()
-    await mock_gateway.check_writes(
-        [
-            DynetPacket.request_channel_level_packet(1, 1),
-            DynetPacket.request_channel_level_packet(1, 2),
-            DynetPacket.request_area_preset_packet(1),
-        ]
-    )
-    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
-    await mock_gateway.check_writes([])
-
+        ])
+    else:
+        await mock_gateway.check_writes([])
+    
 
 @pytest.mark.asyncio
 async def test_dynalite_devices_reconfig(mock_gateway):
-    """Test reconfiguration."""
+    """Test reconfiguration and that no devices are registered again."""
     config = {
         dyn_const.CONF_ACTIVE: False,
         dyn_const.CONF_AREA: {
@@ -237,3 +199,26 @@ async def test_dynalite_devices_reconfig_with_missing(mock_gateway):
         0,
     )
     assert not device.available
+
+@pytest.mark.asyncio
+async def test_dynalite_devices_default_fade(mock_gateway):
+    """Test that default fade works correctly."""
+    [channel_device, preset_device] = mock_gateway.configure_dyn_dev(
+        {
+            dyn_const.CONF_ACTIVE: False,
+            dyn_const.CONF_DEFAULT: {dyn_const.CONF_FADE: 0.5},
+            dyn_const.CONF_AREA: {"1": {dyn_const.CONF_CHANNEL: {"1": {}}}},
+            dyn_const.CONF_PRESET: {"1": {}},
+        },
+        2,
+    )
+    assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_writes([])
+    await channel_device.async_turn_on()
+    await mock_gateway.check_single_write(
+        DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+    )
+    await preset_device.async_turn_on()
+    await mock_gateway.check_single_write(
+        DynetPacket.select_area_preset_packet(1, 1, 0.5)
+    )
