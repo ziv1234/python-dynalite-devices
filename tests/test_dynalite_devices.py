@@ -19,6 +19,7 @@ async def test_empty_dynalite_devices(mock_gateway):
     assert await mock_gateway.async_setup_dyn_dev()
     await mock_gateway.check_writes([])
 
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("active", [False, dyn_const.CONF_ACTIVE_INIT, True])
 async def test_dynalite_devices_active(mock_gateway, active):
@@ -33,22 +34,26 @@ async def test_dynalite_devices_active(mock_gateway, active):
     )
     assert await mock_gateway.async_setup_dyn_dev()
     if active is not False:
-        await mock_gateway.check_writes([
-            DynetPacket.request_channel_level_packet(1, 1),
-            DynetPacket.request_channel_level_packet(1, 2),
-            DynetPacket.request_area_preset_packet(1),
-        ])
+        await mock_gateway.check_writes(
+            [
+                DynetPacket.request_channel_level_packet(1, 1),
+                DynetPacket.request_channel_level_packet(1, 2),
+                DynetPacket.request_area_preset_packet(1),
+            ]
+        )
     else:
         await mock_gateway.check_writes([])
     await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
     if active is True:
-        await mock_gateway.check_writes([
-            DynetPacket.request_channel_level_packet(1, 1),
-            DynetPacket.request_channel_level_packet(1, 2),
-        ])
+        await mock_gateway.check_writes(
+            [
+                DynetPacket.request_channel_level_packet(1, 1),
+                DynetPacket.request_channel_level_packet(1, 2),
+            ]
+        )
     else:
         await mock_gateway.check_writes([])
-    
+
 
 @pytest.mark.asyncio
 async def test_dynalite_devices_reconfig(mock_gateway):
@@ -199,6 +204,7 @@ async def test_dynalite_devices_reconfig_with_missing(mock_gateway):
         0,
     )
     assert not device.available
+
 
 @pytest.mark.asyncio
 async def test_dynalite_devices_default_fade(mock_gateway):

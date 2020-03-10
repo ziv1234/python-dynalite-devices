@@ -148,7 +148,7 @@ class DynaliteDevices:
                 new_device.set_device(
                     2, self._added_presets[area][area_config[CONF_ROOM_OFF]]
                 )
-                self.register_new_device("switch", new_device, False)
+                self.register_new_device(new_device, False)
 
     def register_time_covers(self):
         """Register the time covers from three presets and a channel each."""
@@ -179,9 +179,9 @@ class DynaliteDevices:
                 else:
                     channel_device = DynaliteBaseDevice(area, self)
                 new_device.set_device(4, channel_device)
-                self.register_new_device("cover", new_device, False)
+                self.register_new_device(new_device, False)
 
-    def register_new_device(self, category, device, hidden):
+    def register_new_device(self, device, hidden):
         """Register a new device and group all the ones prior to CONFIGURED event together."""
         # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
         if not hidden:
@@ -265,7 +265,7 @@ class DynaliteDevices:
         hidden = area_config[CONF_PRESET][preset].get(CONF_HIDDEN_ENTITY, False)
         new_device = DynalitePresetSwitchDevice(area, preset, self,)
         new_device.set_level(0)
-        self.register_new_device("switch", new_device, hidden)
+        self.register_new_device(new_device, hidden)
         if area not in self._added_presets:
             self._added_presets[area] = {}
         self._added_presets[area][preset] = new_device
@@ -327,10 +327,10 @@ class DynaliteDevices:
         hidden = channel_config.get(CONF_HIDDEN_ENTITY, False)
         if channel_type == "light":
             new_device = DynaliteChannelLightDevice(area, channel, self,)
-            self.register_new_device("light", new_device, hidden)
+            self.register_new_device(new_device, hidden)
         elif channel_type == "switch":
             new_device = DynaliteChannelSwitchDevice(area, channel, self,)
-            self.register_new_device("switch", new_device, hidden)
+            self.register_new_device(new_device, hidden)
         else:
             LOGGER.info("unknown chnanel type %s - ignoring", channel_type)
             return

@@ -132,17 +132,8 @@ class Dynalite:
         packet = DynetPacket.request_area_preset_packet(area)
         self.write(packet)
 
-    def receive(self, data=None):
-        """Handle data that was received."""
-        if data is not None:
-            for byte in data:
-                self._in_buffer.append(int(byte))
-        if len(self._in_buffer) < 8:
-            LOGGER.debug(
-                "Received %d bytes, not enough to process: %s",
-                len(self._in_buffer),
-                self._in_buffer,
-            )
+    def next_packet(self):
+        """Get a valid packet from in_buffer."""
         packet = None
         while len(self._in_buffer) >= 8 and packet is None:
             first_byte = self._in_buffer[0]
@@ -172,19 +163,39 @@ class Dynalite:
                 del self._in_buffer[0]
                 continue
             self._in_buffer = self._in_buffer[8:]
-            LOGGER.debug("Have packet: %s", packet)
-            if hasattr(packet, "opcode_type") and packet.opcode_type is not None:
-                inbound_handler = DynetInbound()
-                if hasattr(inbound_handler, packet.opcode_type.lower()):
-                    event = getattr(inbound_handler, packet.opcode_type.lower())(packet)
-                    if event:
-                        self.broadcast(event)
-                else:
-                    LOGGER.debug(
-                        "Unhandled Dynet Inbound (%s): %s", packet.opcode_type, packet
-                    )
-            else:
-                LOGGER.debug("Unhandled Dynet Inbound: %s", packet)
+        return packet
+
+    @staticmethod
+    def event_from_packet(packet):
+        """Create an event from a valid packet."""
+        if hasattr(packet, "opcode_type") and packet.opcode_type is not None:
+            inbound_handler = DynetInbound()
+            if hasattr(inbound_handler, packet.opcode_type.lower()):
+                event = getattr(inbound_handler, packet.opcode_type.lower())(packet)
+                return event
+            LOGGER.debug("Unhandled Dynet Inbound (%s): %s", packet.opcode_type, packet)
+        else:
+            LOGGER.debug("Unhandled Dynet Inbound: %s", packet)
+        return False
+
+    def receive(self, data=None):
+        """Handle data that was received."""
+        if data is not None:
+            for byte in data:
+                self._in_buffer.append(int(byte))
+        if len(self._in_buffer) < 8:
+            LOGGER.debug(
+                "Received %d bytes, not enough to process: %s",
+                len(self._in_buffer),
+                self._in_buffer,
+            )
+        packet = self.next_packet()
+        if not packet:
+            return
+        LOGGER.debug("Have packet: %s", packet)
+        event = self.event_from_packet(packet)
+        if event:
+            self.broadcast(event)
         # If there is still buffer to process - start again
         if len(self._in_buffer) >= 8:
             self._loop.call_soon(self.receive)
