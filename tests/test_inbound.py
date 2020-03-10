@@ -11,21 +11,21 @@ def preset_select_func(area, preset):
     return DynetPacket.select_area_preset_packet(area, preset, 0)
 
 def linear_func(area, preset):
-    """Create preset selection packet."""
+    """Create preset linear fade packet."""
     packet = DynetPacket()
     packet.to_msg(area, OpcodeType.LINEAR_PRESET.value, [preset - 1, 0, 0])
     return packet
 
 def report_func(area, preset):
-    """Create preset selection packet."""
+    """Create preset report packet."""
     return DynetPacket.report_area_preset_packet(area, preset)
 
 def set_channel_func(area, channel):
-    """Create preset selection packet."""
+    """Create channel set level packet."""
     return DynetPacket.set_channel_level_packet(area, channel, 1, 0)
 
 def report_channel_func(area, channel):
-    """Create preset selection packet."""
+    """Create channel report level packet."""
     return DynetPacket.report_channel_level_packet(area, channel, 1, 1)
 
 @pytest.mark.asyncio
