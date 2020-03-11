@@ -58,7 +58,7 @@ class MockGateway:
 
     async def async_setup_server(self):
         """Start the server."""
-        asyncio.get_event_loop().create_task(self.run_server())
+        asyncio.create_task(self.run_server())
         await asyncio.sleep(0.01)
 
     async def check_writes(self, packets):

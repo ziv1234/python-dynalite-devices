@@ -61,7 +61,8 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
                 self._current_position = 1.0
                 self._direction = "stop"
                 self._bridge.remove_timer_listener(self.timer_callback)
-        elif self._direction == "close":
+        else:
+            assert self._direction == "close"
             self._current_position -= self._poll_timer / duration
             getattr(self, "update_tilt", int)(self._poll_timer)
             if self._current_position <= 0.0:
@@ -143,7 +144,8 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         elif device == self.get_device(3):
             if device.is_on:
                 self.update_level(self._current_position, self._current_position)
-        elif device == self.get_device(4):
+        else:
+            assert device == self.get_device(4)
             if stop_fade or device.direction == "stop":
                 self.update_level(self._current_position, self._current_position)
             elif device.direction == "open":
@@ -171,7 +173,8 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
         assert self._direction in ["open", "close"]
         if self._direction == "open":
             mult = poll_timer
-        elif self._direction == "close":
+        else: 
+            assert self._direction == "close"
             mult = -poll_timer
         tilt_duration = self._bridge.get_cover_tilt_duration(self._area)
         tilt_diff = mult / tilt_duration

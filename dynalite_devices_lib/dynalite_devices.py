@@ -64,7 +64,7 @@ class BridgeError(Exception):
 class DynaliteDevices:
     """Manages a single Dynalite bridge."""
 
-    def __init__(self, new_device_func=None, update_device_func=None):
+    def __init__(self, new_device_func, update_device_func):
         """Initialize the system."""
         self._host = None
         self._port = None
@@ -92,8 +92,7 @@ class DynaliteDevices:
     async def async_setup(self):
         """Set up a Dynalite bridge based on host parameter in the config."""
         LOGGER.debug("bridge async_setup")
-        if not self._loop:
-            self._loop = asyncio.get_running_loop()
+        self._loop = asyncio.get_running_loop()
         # Run the dynalite object. Assumes self.configure() has been called
         self._resetting = False
         self.connected = await self._dynalite.connect(self._host, self._port)
@@ -186,8 +185,7 @@ class DynaliteDevices:
         # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
         if not hidden:
             if self._configured:
-                if self._new_device_func:
-                    self._new_device_func([device])
+                self._new_device_func([device])
             else:  # send all the devices together when configured
                 self._waiting_devices.append(device)
 
@@ -202,18 +200,11 @@ class DynaliteDevices:
 
     def update_device(self, device):
         """Update one or more devices."""
-        if self._update_device_func:
-            self._update_device_func(device)
+        self._update_device_func(device)
 
     def handle_event(self, event=None):
         """Handle all events."""
         LOGGER.debug("handle_event - type=%s event=%s", event.event_type, event.data)
-        assert event.event_type in [
-            EVENT_CONNECTED,
-            EVENT_DISCONNECTED,
-            EVENT_PRESET,
-            EVENT_CHANNEL,
-        ]
         if event.event_type == EVENT_CONNECTED:
             LOGGER.debug("Received CONNECTED message")
             self.connected = True
@@ -225,8 +216,9 @@ class DynaliteDevices:
         elif event.event_type == EVENT_PRESET:
             LOGGER.debug("Received PRESET message")
             self.handle_preset_selection(event)
-        elif event.event_type == EVENT_CHANNEL:
-            LOGGER.debug("Received PRESET message")
+        else: 
+            assert event.event_type == EVENT_CHANNEL
+            LOGGER.debug("Received CHANNEL message")
             self.handle_channel_change(event)
 
     def ensure_area(self, area):
@@ -351,7 +343,6 @@ class DynaliteDevices:
             # Unknown and no autodiscover
             return
         action = event.data[CONF_ACTION]
-        assert action in [CONF_ACTION_REPORT, CONF_ACTION_CMD, CONF_ACTION_STOP]
         if action == CONF_ACTION_REPORT:
             actual_level = (255 - event.data[CONF_ACT_LEVEL]) / 254
             target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
@@ -365,7 +356,8 @@ class DynaliteDevices:
             channel_to_set = self._added_channels[area][channel]
             channel_to_set.update_level(actual_level, target_level)
             self.update_device(channel_to_set)
-        elif action == CONF_ACTION_STOP:
+        else:
+            assert action == CONF_ACTION_STOP
             if channel == CONF_ALL:
                 for channel in self._added_channels.get(area, {}):
                     channel_to_set = self._added_channels[area][channel]

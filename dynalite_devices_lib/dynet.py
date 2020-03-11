@@ -64,9 +64,9 @@ class DynetPacket:
             raise PacketError(
                 f"Message with the wrong checksum - {[int(byte) for byte in msg]}"
             )
-        if sync == SyncType.LOGICAL.value:
-            if OpcodeType.has_value(self.command):
-                self.opcode_type = OpcodeType(self.command).name
+        assert sync == SyncType.LOGICAL.value
+        if OpcodeType.has_value(self.command):
+            self.opcode_type = OpcodeType(self.command).name
 
     @staticmethod
     def calc_sum(msg):

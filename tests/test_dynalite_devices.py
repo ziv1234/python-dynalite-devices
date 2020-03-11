@@ -179,6 +179,31 @@ async def test_dynalite_devices_area_override(mock_gateway):
 
 
 @pytest.mark.asyncio
+async def test_dynalite_devices_preset_collision(mock_gateway):
+    """Test that a preset defined both in the defaults and in the area ."""
+    name = "aaa"
+    default_name = "bbb"
+    devices = mock_gateway.configure_dyn_dev(
+        {
+            dyn_const.CONF_ACTIVE: False,
+            dyn_const.CONF_AREA: {
+                "1": {
+                    dyn_const.CONF_PRESET: {"1": {dyn_const.CONF_NAME: name}},
+                },
+                "2": {},
+            },
+            dyn_const.CONF_PRESET: {
+                "1": {dyn_const.CONF_NAME: default_name},
+                "2": {},
+            },
+        },
+        4,
+    )
+    assert devices[0].name == "Area 1 " + name
+    assert devices[2].name == "Area 2 " + default_name
+
+
+@pytest.mark.asyncio
 async def test_dynalite_devices_reconfig_with_missing(mock_gateway):
     """Test reconfiguration with fewer devices and see that they are not available."""
     [device] = mock_gateway.configure_dyn_dev(

@@ -60,8 +60,7 @@ class Dynalite:
     async def connect(self, host, port):
         """Connect to Dynet."""
         LOGGER.debug("Connecting to Dynet on %s:%s", host, port)
-        if not self._loop:
-            self._loop = asyncio.get_running_loop()
+        self._loop = asyncio.get_running_loop()
         self._resetting = False
         result = await self.connect_internal(host, port)
         if result and not self._resetting:
@@ -149,12 +148,12 @@ class Dynalite:
                     )
                     self._in_buffer = self._in_buffer[8:]
                     continue
-                if first_byte == SyncType.LOGICAL.value:
-                    try:
-                        packet = DynetPacket(msg=self._in_buffer[:8])
-                    except PacketError as err:
-                        LOGGER.warning(err)
-                        packet = None
+                assert first_byte == SyncType.LOGICAL.value
+                try:
+                    packet = DynetPacket(msg=self._in_buffer[:8])
+                except PacketError as err:
+                    LOGGER.warning(err)
+                    packet = None
             if packet is None:
                 hex_string = ":".join("{:02x}".format(c) for c in self._in_buffer[:8])
                 LOGGER.debug(
