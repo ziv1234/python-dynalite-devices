@@ -335,8 +335,7 @@ class DynaliteDevices:
 
     def handle_channel_change(self, event: DynetEvent) -> None:
         """Change the level of a channel."""
-        LOGGER.debug("handle_channel_change - event=%s", event.data)
-        LOGGER.debug("handle_channel_change called event = %s", event.msg)
+        LOGGER.debug("handle_channel_change - data=%s", event.data)
         area = event.data[CONF_AREA]
         channel = event.data[CONF_CHANNEL]
         if channel != CONF_ALL:

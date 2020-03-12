@@ -66,7 +66,7 @@ class Dynalite:
         result = await self.connect_internal(host, port)
         if result and not self._resetting:
             self._reader_future = self._loop.create_task(self.reader_loop(host, port))
-            self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
+            self.broadcast(DynetEvent(event_type=EVENT_CONNECTED))
         return result
 
     async def reader_loop(self, host: str, port: int) -> None:
@@ -87,7 +87,7 @@ class Dynalite:
                 return  # stop loop
             self._reader = None
             self._writer = None
-            self.broadcast(DynetEvent(event_type=EVENT_DISCONNECTED, data={}))
+            self.broadcast(DynetEvent(event_type=EVENT_DISCONNECTED))
             await asyncio.sleep(CONNECTION_RETRY_DELAY)  # Don't overload the network
             while not await self.connect_internal(host, port):
                 if self._resetting:
@@ -95,7 +95,7 @@ class Dynalite:
                     return  # stop loop
                 # Don't overload the network
                 await asyncio.sleep(CONNECTION_RETRY_DELAY)
-            self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
+            self.broadcast(DynetEvent(event_type=EVENT_CONNECTED))
 
     def broadcast(self, event: DynetEvent) -> None:
         """Broadcast an event to all listeners - queue."""

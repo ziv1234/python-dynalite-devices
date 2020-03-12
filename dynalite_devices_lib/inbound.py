@@ -44,10 +44,6 @@ class DynetInbound:
         packet.fade = (packet.data[0] + (packet.data[1] * 256)) * 0.02
         return DynetEvent(
             event_type=EVENT_PRESET,
-            message=(
-                "Area %d Preset %d Fade %d seconds."
-                % (packet.area, packet.preset, packet.fade)
-            ),
             data={
                 CONF_AREA: packet.area,
                 CONF_PRESET: packet.preset,
@@ -93,7 +89,6 @@ class DynetInbound:
         packet.preset = packet.data[0] + 1
         return DynetEvent(
             event_type=EVENT_PRESET,
-            message=("Current Area %d Preset is %d" % (packet.area, packet.preset)),
             data={CONF_AREA: packet.area, CONF_PRESET: packet.preset},
         )
 
@@ -104,10 +99,6 @@ class DynetInbound:
         packet.fade = (packet.data[1] + (packet.data[2] * 256)) * 0.02
         return DynetEvent(
             event_type=EVENT_PRESET,
-            message=(
-                "Area %d Preset %d Fade %d seconds."
-                % (packet.area, packet.preset, packet.fade)
-            ),
             data={
                 CONF_AREA: packet.area,
                 CONF_PRESET: packet.preset,
@@ -123,13 +114,6 @@ class DynetInbound:
         actual_level = packet.data[2]
         return DynetEvent(
             event_type=EVENT_CHANNEL,
-            message=(
-                "Area %d Channel %d Target Level %d Actual Level %d.",
-                packet.area,
-                channel,
-                target_level,
-                actual_level,
-            ),
             data={
                 CONF_AREA: packet.area,
                 CONF_CHANNEL: channel,
@@ -146,12 +130,6 @@ class DynetInbound:
         target_level = packet.data[0]
         return DynetEvent(
             event_type=EVENT_CHANNEL,
-            message=(
-                "Area %d Channel %d Target Level %d",
-                packet.area,
-                channel,
-                target_level,
-            ),
             data={
                 CONF_AREA: packet.area,
                 CONF_CHANNEL: channel,
@@ -189,7 +167,6 @@ class DynetInbound:
             channel = CONF_ALL
         return DynetEvent(
             event_type=EVENT_CHANNEL,
-            message=("Area %d Channel %s" % (packet.area, channel)),
             data={
                 CONF_AREA: packet.area,
                 CONF_CHANNEL: channel,
