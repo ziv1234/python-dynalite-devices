@@ -269,6 +269,7 @@ class DynaliteDevices:
 
     def handle_preset_selection(self, event: DynetEvent) -> None:
         """Change the selected preset."""
+        assert event.data
         LOGGER.debug("handle_preset_selection - event=%s", event.data)
         area = event.data[CONF_AREA]
         preset = event.data[CONF_PRESET]
@@ -335,6 +336,7 @@ class DynaliteDevices:
 
     def handle_channel_change(self, event: DynetEvent) -> None:
         """Change the level of a channel."""
+        assert event.data
         LOGGER.debug("handle_channel_change - data=%s", event.data)
         area = event.data[CONF_AREA]
         channel = event.data[CONF_CHANNEL]
