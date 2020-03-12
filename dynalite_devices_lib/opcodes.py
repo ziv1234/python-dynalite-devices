@@ -11,7 +11,7 @@ class SyncType(Enum):
     DEBUG_MSG = 108  # 0x6c
 
     @classmethod
-    def has_value(cls, value):
+    def has_value(cls, value: int) -> bool:
         """Return the item that has this as a value."""
         return any(value == item.value for item in cls)
 
@@ -94,6 +94,6 @@ class OpcodeType(Enum):
     SET_CHANNEL_4_TO_LEVEL_WITH_FADE = 131
 
     @classmethod
-    def has_value(cls, value):
+    def has_value(cls, value: int) -> bool:
         """Return the item that has this as a value."""
         return any(value == item.value for item in cls)
