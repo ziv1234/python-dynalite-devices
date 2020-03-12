@@ -32,6 +32,7 @@ class DynetPacket:
         self.area = -1
         self.data: List[int] = []
         self.command = -1
+        self._msg: List[int] = []
         if msg is not None:
             self.from_msg(msg)
 
@@ -48,6 +49,11 @@ class DynetPacket:
         my_bytes.append(self.calc_sum(my_bytes))
         self.from_msg(my_bytes)
 
+    @property
+    def msg(self):
+        """Get the byte array for the message to send."""
+        return bytearray(self._msg)
+
     def from_msg(self, msg: List[int]) -> None:
         """Decode a Dynet message."""
         message_length = len(msg)
@@ -55,14 +61,12 @@ class DynetPacket:
             raise PacketError(f"Message too short ({len(msg)} bytes): {msg}")
         if message_length > 8:
             raise PacketError(f"Message too long ({len(msg)} bytes): {msg}")
-        self.msg = bytearray()
-        for byte in msg:
-            self.msg.append(byte)
-        sync = self.msg[0]
-        self.area = self.msg[1]
-        self.data = [self.msg[2], self.msg[4], self.msg[5]]
-        self.command = self.msg[3]
-        chk = self.msg[7]
+        self._msg = msg
+        sync = msg[0]
+        self.area = msg[1]
+        self.data = [msg[2], msg[4], msg[5]]
+        self.command = msg[3]
+        chk = msg[7]
         if chk != self.calc_sum(msg):
             raise PacketError(
                 f"Message with the wrong checksum - {[int(byte) for byte in msg]}"
@@ -75,7 +79,7 @@ class DynetPacket:
     def calc_sum(msg: List[int]) -> int:
         """Calculate the checksum."""
         msg = msg[:7]
-        return -(sum(ord(c) for c in "".join(map(chr, msg))) % 256) & 0xFF
+        return -(sum(msg) % 256) & 0xFF
 
     def __repr__(self):
         """Print the packet."""
