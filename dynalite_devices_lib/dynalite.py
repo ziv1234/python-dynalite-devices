@@ -172,7 +172,7 @@ class Dynalite:
     @staticmethod
     def event_from_packet(packet: DynetPacket) -> Optional[DynetEvent]:
         """Create an event from a valid packet."""
-        if hasattr(packet, "opcode_type") and packet.opcode_type is not None:
+        if packet.opcode_type is not None:
             inbound_handler = DynetInbound()
             if hasattr(inbound_handler, packet.opcode_type.lower()):
                 event = getattr(inbound_handler, packet.opcode_type.lower())(packet)
