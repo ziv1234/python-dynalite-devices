@@ -3,7 +3,9 @@ import asyncio
 from typing import Any
 
 from .const import ATTR_POSITION, ATTR_TILT_POSITION, CONF_TEMPLATE, CONF_TIME_COVER
-from .dynalitebase import DynaliteMultiDevice
+from .dynalitebase import DynaliteBaseDevice, DynaliteMultiDevice
+from .light import DynaliteChannelLightDevice
+from .switch import DynalitePresetSwitchDevice
 
 
 class DynaliteTimeCoverDevice(DynaliteMultiDevice):
@@ -137,20 +139,23 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         await self.get_device(3).async_turn_on()
         self.update_level(self._current_position, self._current_position)
 
-    # def listener(self, device: Union[DynalitePresetSwitchDevice, DynaliteChannelLightDevice], stop_fade: bool) -> None:
-    def listener(self, device: Any, stop_fade: bool) -> None:
+    def listener(self, device: DynaliteBaseDevice, stop_fade: bool) -> None:
         """Update according to updates in underlying devices."""
         if device == self.get_device(1):
+            assert isinstance(device, DynalitePresetSwitchDevice)
             if device.is_on:
                 self.update_level(self._current_position, 1.0)
         elif device == self.get_device(2):
+            assert isinstance(device, DynalitePresetSwitchDevice)
             if device.is_on:
                 self.update_level(self._current_position, 0.0)
         elif device == self.get_device(3):
+            assert isinstance(device, DynalitePresetSwitchDevice)
             if device.is_on:
                 self.update_level(self._current_position, self._current_position)
         else:
             assert device == self.get_device(4)
+            assert isinstance(device, DynaliteChannelLightDevice)
             if stop_fade or device.direction == "stop":
                 self.update_level(self._current_position, self._current_position)
             elif device.direction == "open":
