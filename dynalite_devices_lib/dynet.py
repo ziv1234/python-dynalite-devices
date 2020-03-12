@@ -9,7 +9,7 @@ Library to handle Dynet networks.
 """
 
 import json
-from typing import List
+from typing import List, Optional
 
 from .opcodes import OpcodeType, SyncType
 
@@ -28,7 +28,7 @@ class DynetPacket:
 
     def __init__(self, msg: List[int] = None) -> None:
         """Initialize the packet."""
-        self.opcode_type = ""
+        self.opcode_type: Optional[str] = None
         self.area = -1
         self.data: List[int] = []
         self.command = -1
