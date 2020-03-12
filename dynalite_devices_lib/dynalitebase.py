@@ -84,4 +84,5 @@ class DynaliteMultiDevice(DynaliteBaseDevice):
 
     def listener(self, device, stop_fade):
         """Update the device since its internal devices changed."""
+        # pylint: disable=unused-argument
         self._bridge.update_device(self)

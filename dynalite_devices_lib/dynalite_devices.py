@@ -216,7 +216,7 @@ class DynaliteDevices:
         elif event.event_type == EVENT_PRESET:
             LOGGER.debug("Received PRESET message")
             self.handle_preset_selection(event)
-        else: 
+        else:
             assert event.event_type == EVENT_CHANNEL
             LOGGER.debug("Received CHANNEL message")
             self.handle_channel_change(event)

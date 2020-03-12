@@ -49,6 +49,7 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
 
     async def async_turn_on(self, **kwargs):
         """Turn light on."""
+        # pylint: disable=unused-argument
         if ATTR_BRIGHTNESS in kwargs:
             brightness = kwargs[ATTR_BRIGHTNESS] / 255.0
         else:
@@ -58,4 +59,5 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
 
     async def async_turn_off(self, **kwargs):
         """Turn light off."""
+        # pylint: disable=unused-argument
         await self.async_turn_on(**{ATTR_BRIGHTNESS: 0})

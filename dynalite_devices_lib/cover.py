@@ -93,11 +93,13 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
 
     async def async_open_cover(self, **kwargs):
         """Open the cover."""
+        # pylint: disable=unused-argument
         await self.get_device(1).async_turn_on()
         self.update_level(self._current_position, 1.0)
 
     async def async_close_cover(self, **kwargs):
         """Close the cover."""
+        # pylint: disable=unused-argument
         await self.get_device(2).async_turn_on()
         self.update_level(self._current_position, 0.0)
 
@@ -130,6 +132,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
 
     async def async_stop_cover(self, **kwargs):
         """Stop the cover."""
+        # pylint: disable=unused-argument
         await self.get_device(3).async_turn_on()
         self.update_level(self._current_position, self._current_position)
 
@@ -173,7 +176,7 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
         assert self._direction in ["open", "close"]
         if self._direction == "open":
             mult = poll_timer
-        else: 
+        else:
             assert self._direction == "close"
             mult = -poll_timer
         tilt_duration = self._bridge.get_cover_tilt_duration(self._area)
@@ -198,12 +201,14 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
 
     async def async_open_cover_tilt(self, **kwargs):
         """Open the cover tilt."""
+        # pylint: disable=unused-argument
         if self._current_tilt == 1:
             return
         await self.apply_tilt_diff(1 - self._current_tilt)
 
     async def async_close_cover_tilt(self, **kwargs):
         """Close the cover tilt."""
+        # pylint: disable=unused-argument
         if self._current_tilt == 0:
             return
         await self.apply_tilt_diff(0 - self._current_tilt)
@@ -215,4 +220,5 @@ class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
 
     async def async_stop_cover_tilt(self, **kwargs):
         """Stop cover tilt."""
+        # pylint: disable=unused-argument
         await self.async_stop_cover()

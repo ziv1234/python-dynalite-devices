@@ -187,15 +187,10 @@ async def test_dynalite_devices_preset_collision(mock_gateway):
         {
             dyn_const.CONF_ACTIVE: False,
             dyn_const.CONF_AREA: {
-                "1": {
-                    dyn_const.CONF_PRESET: {"1": {dyn_const.CONF_NAME: name}},
-                },
+                "1": {dyn_const.CONF_PRESET: {"1": {dyn_const.CONF_NAME: name}}},
                 "2": {},
             },
-            dyn_const.CONF_PRESET: {
-                "1": {dyn_const.CONF_NAME: default_name},
-                "2": {},
-            },
+            dyn_const.CONF_PRESET: {"1": {dyn_const.CONF_NAME: default_name}, "2": {}},
         },
         4,
     )

@@ -1,5 +1,6 @@
 """Constants for the Dynalite component."""
 import logging
+from typing import Dict, Union
 
 LOGGER = logging.getLogger(__package__)
 DOMAIN = "dynalite-devices"
@@ -53,7 +54,7 @@ DEFAULT_CHANNEL_TYPE = "light"
 DEFAULT_COVER_CLASS = "shutter"
 DEFAULT_NAME = "dynalite"
 DEFAULT_PORT = 12345
-DEFAULT_TEMPLATES = {
+DEFAULT_TEMPLATES: Dict[str, Dict[str, Union[str, int]]] = {
     CONF_ROOM: {CONF_ROOM_ON: "1", CONF_ROOM_OFF: "4"},
     CONF_TRIGGER: {CONF_TRIGGER: "1"},
     CONF_HIDDEN_ENTITY: {},

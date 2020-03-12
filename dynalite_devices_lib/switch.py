@@ -28,15 +28,18 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
 
     def update_level(self, actual_level, target_level):
         """Update the current level."""
+        # pylint: disable=unused-argument
         self._level = actual_level
 
     async def async_turn_on(self, **kwargs):
         """Turn switch on."""
+        # pylint: disable=unused-argument
         fade = self._bridge.get_channel_fade(self._area, self._channel)
         self._bridge.set_channel_level(self._area, self._channel, 1, fade)
 
     async def async_turn_off(self, **kwargs):
         """Turn switch off."""
+        # pylint: disable=unused-argument
         fade = self._bridge.get_channel_fade(self._area, self._channel)
         self._bridge.set_channel_level(self._area, self._channel, 0, fade)
 
@@ -84,11 +87,13 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
 
     async def async_turn_on(self, **kwargs):
         """Turn switch on."""
+        # pylint: disable=unused-argument
         fade = self._bridge.get_preset_fade(self._area, self._preset)
         self._bridge.select_preset(self._area, self._preset, fade)
 
     async def async_turn_off(self, **kwargs):
         """Turn switch off - doesn't do anything for presets."""
+        # pylint: disable=unused-argument
         self.set_level(0)
 
 
@@ -121,8 +126,10 @@ class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
 
     async def async_turn_on(self, **kwargs):
         """Turn switch on."""
+        # pylint: disable=unused-argument
         await self.get_device(1).async_turn_on()
 
     async def async_turn_off(self, **kwargs):
         """Turn switch off."""
+        # pylint: disable=unused-argument
         await self.get_device(2).async_turn_on()
