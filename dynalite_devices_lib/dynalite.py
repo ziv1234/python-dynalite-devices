@@ -10,6 +10,7 @@ Manage a Dynalite connection.
 
 import asyncio
 import time
+from typing import Callable, List, Optional
 
 from .const import (
     CONF_ACTION,
@@ -35,20 +36,20 @@ from .opcodes import SyncType
 class Dynalite:
     """Class to represent the interaction with Dynalite."""
 
-    def __init__(self, broadcast_func):
+    def __init__(self, broadcast_func: Callable) -> None:
         """Initialize the class."""
-        self._loop = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._broadcast_func = broadcast_func
-        self._in_buffer = []
-        self._out_buffer = []
-        self._last_sent = None
+        self._in_buffer: List[int] = []
+        self._out_buffer: List[DynetPacket] = []
+        self._last_sent = 0.0
         self._message_delay = MESSAGE_DELAY  # public for testing
-        self._reader = None
-        self._writer = None
+        self._reader: Optional[asyncio.StreamReader] = None
+        self._writer: Optional[asyncio.StreamWriter] = None
         self._resetting = False
-        self._reader_future = None
+        self._reader_future: Optional[asyncio.Task] = None
 
-    async def connect_internal(self, host, port):
+    async def connect_internal(self, host: str, port: int) -> bool:
         """Create the actual connection to Dynet."""
         try:
             self._reader, self._writer = await asyncio.open_connection(host, port)
@@ -57,7 +58,7 @@ class Dynalite:
             LOGGER.warning("Could not connect to Dynet (%s)", err)
             return False
 
-    async def connect(self, host, port):
+    async def connect(self, host: str, port: int) -> bool:
         """Connect to Dynet."""
         LOGGER.debug("Connecting to Dynet on %s:%s", host, port)
         self._loop = asyncio.get_running_loop()
@@ -68,11 +69,12 @@ class Dynalite:
             self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
         return result
 
-    async def reader_loop(self, host, port):
+    async def reader_loop(self, host: str, port: int) -> None:
         """Loop to read from the stream reader and reconnect if necessary."""
         while True:
             self.write()  # write if there is something in the buffers
             try:
+                assert self._reader
                 data = await self._reader.read(100)
                 if len(data) > 0:
                     self.receive(data)
@@ -95,11 +97,14 @@ class Dynalite:
                 await asyncio.sleep(CONNECTION_RETRY_DELAY)
             self.broadcast(DynetEvent(event_type=EVENT_CONNECTED, data={}))
 
-    def broadcast(self, event):
+    def broadcast(self, event: DynetEvent) -> None:
         """Broadcast an event to all listeners - queue."""
+        assert self._loop
         self._loop.call_soon(self._broadcast_func, event)
 
-    def set_channel_level(self, area, channel, level, fade):
+    def set_channel_level(
+        self, area: int, channel: int, level: float, fade: float
+    ) -> None:
         """Set the level of a channel."""
         packet = DynetPacket.set_channel_level_packet(area, channel, level, fade)
         self.write(packet)
@@ -111,7 +116,7 @@ class Dynalite:
         }
         self.broadcast(DynetEvent(event_type=EVENT_CHANNEL, data=broadcast_data))
 
-    def select_preset(self, area, preset, fade):
+    def select_preset(self, area: int, preset: int, fade: float) -> None:
         """Select a preset in an area."""
         packet = DynetPacket.select_area_preset_packet(area, preset, fade)
         self.write(packet)
@@ -121,17 +126,17 @@ class Dynalite:
         }
         self.broadcast(DynetEvent(event_type=EVENT_PRESET, data=broadcast_data))
 
-    def request_channel_level(self, area, channel):
+    def request_channel_level(self, area: int, channel: int) -> None:
         """Request a level for a specific channel."""
         packet = DynetPacket.request_channel_level_packet(area, channel)
         self.write(packet)
 
-    def request_area_preset(self, area):
+    def request_area_preset(self, area: int) -> None:
         """Request current preset of an area."""
         packet = DynetPacket.request_area_preset_packet(area)
         self.write(packet)
 
-    def next_packet(self):
+    def next_packet(self) -> Optional[DynetPacket]:
         """Get a valid packet from in_buffer."""
         packet = None
         while len(self._in_buffer) >= 8 and packet is None:
@@ -165,7 +170,7 @@ class Dynalite:
         return packet
 
     @staticmethod
-    def event_from_packet(packet):
+    def event_from_packet(packet: DynetPacket) -> Optional[DynetEvent]:
         """Create an event from a valid packet."""
         if hasattr(packet, "opcode_type") and packet.opcode_type is not None:
             inbound_handler = DynetInbound()
@@ -175,9 +180,9 @@ class Dynalite:
             LOGGER.debug("Unhandled Dynet Inbound (%s): %s", packet.opcode_type, packet)
         else:
             LOGGER.debug("Unhandled Dynet Inbound: %s", packet)
-        return False
+        return None
 
-    def receive(self, data=None):
+    def receive(self, data: Optional[bytes] = None) -> None:
         """Handle data that was received."""
         if data is not None:
             for byte in data:
@@ -197,9 +202,10 @@ class Dynalite:
             self.broadcast(event)
         # If there is still buffer to process - start again
         if len(self._in_buffer) >= 8:
+            assert self._loop
             self._loop.call_soon(self.receive)
 
-    def write(self, new_packet=None):
+    def write(self, new_packet: Optional[DynetPacket] = None) -> None:
         """Write a packet or trigger write loop."""
         if new_packet is not None:
             self._out_buffer.append(new_packet)
@@ -207,12 +213,13 @@ class Dynalite:
             LOGGER.debug("write before transport is ready. queuing")
             return
         if self._message_delay > 0:  # in testing it is set to 0
-            if self._last_sent is None:
+            if self._last_sent == 0.0:
                 self._last_sent = time.time()
             current_time = time.time()
             elapsed = current_time - self._last_sent
             delay = self._message_delay - elapsed
             if delay > 0:
+                assert self._loop
                 self._loop.call_later(delay, self.write)
                 return
         if len(self._out_buffer) == 0:
@@ -224,6 +231,7 @@ class Dynalite:
         self._last_sent = time.time()
         del self._out_buffer[0]
         if len(self._out_buffer) > 0:
+            assert self._loop
             self._loop.call_later(self._message_delay, self.write)
 
     async def async_reset(self):
