@@ -9,6 +9,7 @@ Library to handle Dynet networks.
 """
 
 import json
+from typing import List
 
 from .opcodes import OpcodeType, SyncType
 
@@ -16,7 +17,7 @@ from .opcodes import OpcodeType, SyncType
 class PacketError(Exception):
     """Class for Dynet packet errors."""
 
-    def __init__(self, message):
+    def __init__(self, message: str) -> None:
         """Initialize the error."""
         self.message = message
         super().__init__(message)
@@ -25,18 +26,18 @@ class PacketError(Exception):
 class DynetPacket:
     """Class for a Dynet network packet."""
 
-    def __init__(self, msg=None):
+    def __init__(self, msg: List[int] = None) -> None:
         """Initialize the packet."""
-        self.opcode_type = None
-        self.area = None
-        self.data = []
-        self.command = None
+        self.opcode_type = ""
+        self.area = -1
+        self.data: List[int] = []
+        self.command = -1
         if msg is not None:
             self.from_msg(msg)
 
-    def to_msg(self, area, command, data):
+    def to_msg(self, area: int, command: int, data: List[int]) -> None:
         """Convert packet to a binary message."""
-        my_bytes = bytearray()
+        my_bytes: List[int] = []
         my_bytes.append(SyncType.LOGICAL.value)
         my_bytes.append(area)
         my_bytes.append(data[0])
@@ -47,18 +48,20 @@ class DynetPacket:
         my_bytes.append(self.calc_sum(my_bytes))
         self.from_msg(my_bytes)
 
-    def from_msg(self, msg):
+    def from_msg(self, msg: List[int]) -> None:
         """Decode a Dynet message."""
         message_length = len(msg)
         if message_length < 8:
             raise PacketError(f"Message too short ({len(msg)} bytes): {msg}")
         if message_length > 8:
             raise PacketError(f"Message too long ({len(msg)} bytes): {msg}")
-        self.msg = msg
-        sync = msg[0]
-        self.area = msg[1]
-        self.data = [msg[2], msg[4], msg[5]]
-        self.command = msg[3]
+        self.msg = bytearray()
+        for byte in msg:
+            self.msg.append(byte)
+        sync = self.msg[0]
+        self.area = self.msg[1]
+        self.data = [self.msg[2], self.msg[4], self.msg[5]]
+        self.command = self.msg[3]
         chk = self.msg[7]
         if chk != self.calc_sum(msg):
             raise PacketError(
@@ -69,7 +72,7 @@ class DynetPacket:
             self.opcode_type = OpcodeType(self.command).name
 
     @staticmethod
-    def calc_sum(msg):
+    def calc_sum(msg: List[int]) -> int:
         """Calculate the checksum."""
         msg = msg[:7]
         return -(sum(ord(c) for c in "".join(map(chr, msg))) % 256) & 0xFF
@@ -79,7 +82,9 @@ class DynetPacket:
         return json.dumps(self.__dict__)
 
     @staticmethod
-    def set_channel_level_packet(area, channel, level, fade):
+    def set_channel_level_packet(
+        area: int, channel: int, level: float, fade: float
+    ) -> "DynetPacket":
         """Create a packet to set level of a channel."""
         channel_bank = 0xFF if (channel <= 4) else (int((channel - 1) / 4) - 1)
         target_level = int(255 - 254 * level)
@@ -94,7 +99,7 @@ class DynetPacket:
         return packet
 
     @staticmethod
-    def select_area_preset_packet(area, preset, fade):
+    def select_area_preset_packet(area: int, preset: int, fade: float) -> "DynetPacket":
         """Create a packet to select a preset in an area."""
         preset = preset - 1
         bank = int((preset) / 8)
@@ -110,7 +115,7 @@ class DynetPacket:
         return packet
 
     @staticmethod
-    def request_channel_level_packet(area, channel):
+    def request_channel_level_packet(area: int, channel: int) -> "DynetPacket":
         """Create a packet to request the level of a specific channel."""
         packet = DynetPacket()
         packet.to_msg(
@@ -121,7 +126,7 @@ class DynetPacket:
         return packet
 
     @staticmethod
-    def stop_channel_fade_packet(area, channel):
+    def stop_channel_fade_packet(area: int, channel: int) -> "DynetPacket":
         """Create a packet to stop fade of a channel."""
         packet = DynetPacket()
         packet.to_msg(
@@ -130,7 +135,7 @@ class DynetPacket:
         return packet
 
     @staticmethod
-    def request_area_preset_packet(area):
+    def request_area_preset_packet(area: int) -> "DynetPacket":
         """Create a packet to request the current preset in an area."""
         packet = DynetPacket()
         packet.to_msg(
@@ -139,7 +144,9 @@ class DynetPacket:
         return packet
 
     @staticmethod
-    def report_channel_level_packet(area, channel, target_level, actual_level):
+    def report_channel_level_packet(
+        area: int, channel: int, target_level: float, actual_level: float
+    ) -> "DynetPacket":
         """Create a packet that reports the level of a channel."""
         packet = DynetPacket()
         packet.to_msg(
@@ -154,7 +161,7 @@ class DynetPacket:
         return packet
 
     @staticmethod
-    def report_area_preset_packet(area, preset):
+    def report_area_preset_packet(area: int, preset: int) -> "DynetPacket":
         """Create a packet that reports the current preset in an area."""
         packet = DynetPacket()
         packet.to_msg(
