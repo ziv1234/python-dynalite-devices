@@ -1,6 +1,7 @@
 """Class to create devices from a Dynalite hub."""
 
 import asyncio
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 from .config import DynaliteConfig
 from .const import (
@@ -44,6 +45,7 @@ from .const import (
 from .cover import DynaliteTimeCoverDevice, DynaliteTimeCoverWithTiltDevice
 from .dynalite import Dynalite
 from .dynalitebase import DynaliteBaseDevice
+from .event import DynetEvent
 from .light import DynaliteChannelLightDevice
 from .switch import (
     DynaliteChannelSwitchDevice,
@@ -55,7 +57,7 @@ from .switch import (
 class BridgeError(Exception):
     """For errors in the Dynalite bridge."""
 
-    def __init__(self, message):
+    def __init__(self, message: str) -> None:
         """Initialize the exception."""
         self.message = message
         super().__init__(message)
@@ -64,32 +66,32 @@ class BridgeError(Exception):
 class DynaliteDevices:
     """Manages a single Dynalite bridge."""
 
-    def __init__(self, new_device_func, update_device_func):
+    def __init__(self, new_device_func: Callable, update_device_func: Callable) -> None:
         """Initialize the system."""
-        self._host = None
-        self._port = None
+        self._host = ""
+        self._port = 0
         self.name = None  # public
-        self._poll_timer = None
-        self._default_fade = None
-        self._active = None
+        self._poll_timer = 0.0
+        self._default_fade = 0.0
+        self._active = False
         self._auto_discover = None
-        self._loop = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._new_device_func = new_device_func
         self._update_device_func = update_device_func
         self._configured = False
         self.connected = False  # public
-        self._added_presets = {}
-        self._added_channels = {}
-        self._added_room_switches = {}
-        self._added_time_covers = {}
-        self._waiting_devices = []
+        self._added_presets: Dict[int, Any] = {}
+        self._added_channels: Dict[int, Any] = {}
+        self._added_room_switches: Dict[int, Any] = {}
+        self._added_time_covers: Dict[int, Any] = {}
+        self._waiting_devices: List[DynaliteBaseDevice] = []
         self._timer_active = False
-        self._timer_callbacks = set()
-        self._area = {}
+        self._timer_callbacks: Set[Callable] = set()
+        self._area: Dict[int, Any] = {}
         self._dynalite = Dynalite(broadcast_func=self.handle_event)
         self._resetting = False
 
-    async def async_setup(self):
+    async def async_setup(self) -> bool:
         """Set up a Dynalite bridge based on host parameter in the config."""
         LOGGER.debug("bridge async_setup")
         self._loop = asyncio.get_running_loop()
@@ -98,7 +100,7 @@ class DynaliteDevices:
         self.connected = await self._dynalite.connect(self._host, self._port)
         return self.connected
 
-    def configure(self, config):
+    def configure(self, config: Dict[str, Any]) -> None:
         """Configure a Dynalite bridge."""
         LOGGER.debug("bridge async_configure - %s", config)
         self._configured = False
@@ -133,7 +135,7 @@ class DynaliteDevices:
             self._waiting_devices = []
         self._configured = True
 
-    def register_rooms(self):
+    def register_rooms(self) -> None:
         """Register the room switches from two normal presets each."""
         for area, area_config in self._area.items():
             if area_config.get(CONF_TEMPLATE, "") == CONF_ROOM:
@@ -149,7 +151,7 @@ class DynaliteDevices:
                 )
                 self.register_new_device(new_device, False)
 
-    def register_time_covers(self):
+    def register_time_covers(self) -> None:
         """Register the time covers from three presets and a channel each."""
         for area, area_config in self._area.items():
             if area_config.get(CONF_TEMPLATE, "") == CONF_TIME_COVER:
@@ -180,7 +182,7 @@ class DynaliteDevices:
                 new_device.set_device(4, channel_device)
                 self.register_new_device(new_device, False)
 
-    def register_new_device(self, device, hidden):
+    def register_new_device(self, device: DynaliteBaseDevice, hidden: bool) -> None:
         """Register a new device and group all the ones prior to CONFIGURED event together."""
         # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
         if not hidden:
@@ -189,7 +191,7 @@ class DynaliteDevices:
             else:  # send all the devices together when configured
                 self._waiting_devices.append(device)
 
-    def available(self, conf, area, item_num):
+    def available(self, conf: str, area: int, item_num: Union[int, str]) -> bool:
         """Return whether a device on the bridge is available."""
         if not self.connected:
             return False
@@ -198,11 +200,11 @@ class DynaliteDevices:
         assert conf == CONF_TEMPLATE
         return self._area.get(area, {}).get(CONF_TEMPLATE, "") == item_num
 
-    def update_device(self, device):
+    def update_device(self, device: Union[DynaliteBaseDevice, str]) -> None:
         """Update one or more devices."""
         self._update_device_func(device)
 
-    def handle_event(self, event=None):
+    def handle_event(self, event: DynetEvent) -> None:
         """Handle all events."""
         LOGGER.debug("handle_event - type=%s event=%s", event.event_type, event.data)
         if event.event_type == EVENT_CONNECTED:
@@ -221,7 +223,7 @@ class DynaliteDevices:
             LOGGER.debug("Received CHANNEL message")
             self.handle_channel_change(event)
 
-    def ensure_area(self, area):
+    def ensure_area(self, area: int) -> None:
         """Configure a default area if it is not yet in config."""
         if area not in self._area:
             LOGGER.debug("adding area %s that is not in config", area)
@@ -230,7 +232,7 @@ class DynaliteDevices:
                 area, {}, self._default_fade, {}, {}
             )
 
-    def create_preset_if_new(self, area, preset):
+    def create_preset_if_new(self, area: int, preset: int) -> None:
         """Register a new preset."""
         LOGGER.debug("create_preset_if_new - area=%s preset=%s", area, preset)
         # if already configured, ignore
@@ -265,7 +267,7 @@ class DynaliteDevices:
             "Creating Dynalite preset area=%s preset=%s hidden=%s", area, preset, hidden
         )
 
-    def handle_preset_selection(self, event=None):
+    def handle_preset_selection(self, event: DynetEvent) -> None:
         """Change the selected preset."""
         LOGGER.debug("handle_preset_selection - event=%s", event.data)
         area = event.data[CONF_AREA]
@@ -288,11 +290,9 @@ class DynaliteDevices:
             for channel in self._area[area].get(CONF_CHANNEL, {}):
                 self._dynalite.request_channel_level(area, channel)
 
-    def create_channel_if_new(self, area, channel):
+    def create_channel_if_new(self, area: int, channel: int) -> None:
         """Register a new channel."""
         LOGGER.debug("create_channel_if_new - area=%s, channel=%s", area, channel)
-        if channel == CONF_ALL:
-            return
         # if already configured, ignore
         if self._added_channels.get(area, {}).get(channel, False):
             return
@@ -318,7 +318,9 @@ class DynaliteDevices:
         ).lower()
         hidden = channel_config.get(CONF_HIDDEN_ENTITY, False)
         if channel_type == "light":
-            new_device = DynaliteChannelLightDevice(area, channel, self,)
+            new_device: DynaliteBaseDevice = DynaliteChannelLightDevice(
+                area, channel, self,
+            )
             self.register_new_device(new_device, hidden)
         elif channel_type == "switch":
             new_device = DynaliteChannelSwitchDevice(area, channel, self,)
@@ -331,17 +333,18 @@ class DynaliteDevices:
         self._added_channels[area][channel] = new_device
         LOGGER.debug("Creating Dynalite channel area=%s channel=%s", area, channel)
 
-    def handle_channel_change(self, event=None):
+    def handle_channel_change(self, event: DynetEvent) -> None:
         """Change the level of a channel."""
         LOGGER.debug("handle_channel_change - event=%s", event.data)
         LOGGER.debug("handle_channel_change called event = %s", event.msg)
         area = event.data[CONF_AREA]
         channel = event.data[CONF_CHANNEL]
-        try:
-            self.create_channel_if_new(area, channel)
-        except BridgeError:
-            # Unknown and no autodiscover
-            return
+        if channel != CONF_ALL:
+            try:
+                self.create_channel_if_new(area, channel)
+            except BridgeError:
+                # Unknown and no autodiscover
+                return
         action = event.data[CONF_ACTION]
         if action == CONF_ACTION_REPORT:
             actual_level = (255 - event.data[CONF_ACT_LEVEL]) / 254
@@ -368,72 +371,76 @@ class DynaliteDevices:
                 channel_to_set.stop_fade()
                 self.update_device(channel_to_set)
 
-    def add_timer_listener(self, callback_func):
+    def add_timer_listener(self, callback_func: Callable) -> None:
         """Add a listener to the timer and start if needed."""
         self._timer_callbacks.add(callback_func)
         if not self._timer_active:
+            assert self._loop
             self._loop.call_later(self._poll_timer, self.timer_func)
             self._timer_active = True
 
-    def remove_timer_listener(self, callback_func):
+    def remove_timer_listener(self, callback_func: Callable) -> None:
         """Remove a listener from a timer."""
         self._timer_callbacks.discard(callback_func)
 
-    def timer_func(self):
+    def timer_func(self) -> None:
         """Call callbacks and either schedule timer or stop."""
         if self._timer_callbacks and not self._resetting:
+            assert self._loop
             for callback in self._timer_callbacks:
                 self._loop.call_soon(callback)
             self._loop.call_later(self._poll_timer, self.timer_func)
         else:
             self._timer_active = False
 
-    def set_channel_level(self, area, channel, level, fade):
+    def set_channel_level(
+        self, area: int, channel: int, level: float, fade: float
+    ) -> None:
         """Set the level for a channel."""
         fade = self._area[area][CONF_CHANNEL][channel][CONF_FADE]
         self._dynalite.set_channel_level(area, channel, level, fade)
 
-    def select_preset(self, area, preset, fade):
+    def select_preset(self, area: int, preset: int, fade: float) -> None:
         """Select a preset in an area."""
         self._dynalite.select_preset(area, preset, fade)
 
-    def get_area_name(self, area):
+    def get_area_name(self, area: int) -> str:
         """Return the name of an area."""
         return self._area[area][CONF_NAME]
 
-    def get_channel_name(self, area, channel):
+    def get_channel_name(self, area: int, channel: int) -> str:
         """Return the name of a channel."""
         return f"{self._area[area][CONF_NAME]} {self._area[area][CONF_CHANNEL][channel][CONF_NAME]}"
 
-    def get_channel_fade(self, area, channel):
+    def get_channel_fade(self, area: int, channel: int) -> float:
         """Return the fade of a channel."""
         return self._area[area][CONF_CHANNEL][channel][CONF_FADE]
 
-    def get_preset_name(self, area, preset):
+    def get_preset_name(self, area: int, preset: int) -> str:
         """Return the name of a preset."""
         return f"{self._area[area][CONF_NAME]} {self._area[area][CONF_PRESET][preset][CONF_NAME]}"
 
-    def get_preset_fade(self, area, preset):
+    def get_preset_fade(self, area: int, preset: int) -> float:
         """Return the fade of a preset."""
         return self._area[area][CONF_PRESET][preset][CONF_FADE]
 
-    def get_multi_name(self, area):
+    def get_multi_name(self, area: int) -> str:
         """Return the name of a multi-device."""
         return self._area[area][CONF_NAME]
 
-    def get_device_class(self, area):
+    def get_device_class(self, area: int) -> str:
         """Return the class for a blind."""
         return self._area[area][CONF_DEVICE_CLASS]
 
-    def get_cover_duration(self, area):
+    def get_cover_duration(self, area: int) -> float:
         """Return the class for a blind."""
         return self._area[area][CONF_DURATION]
 
-    def get_cover_tilt_duration(self, area):
+    def get_cover_tilt_duration(self, area: int) -> float:
         """Return the class for a blind."""
         return self._area[area][CONF_TILT_TIME]
 
-    def get_master_area(self, area):
+    def get_master_area(self, area: int) -> str:
         """Get the master area when combining entities from different Dynet areas to the same area."""
         assert area in self._area
         area_config = self._area[area]
