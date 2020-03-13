@@ -415,7 +415,10 @@ class DynaliteDevices:
 
     def get_channel_name(self, area: int, channel: int) -> str:
         """Return the name of a channel."""
-        return f"{self._area[area][CONF_NAME]} {self._area[area][CONF_CHANNEL][channel][CONF_NAME]}"
+        cur_area = self._area.get(area, {})
+        default_area_name = f"Area {area}"
+        default_channel_name = f"Channel {channel}"
+        return f"{cur_area.get(CONF_NAME, default_area_name)} {cur_area.get(CONF_CHANNEL, {}).get(channel, {}).get(CONF_NAME, default_channel_name)}"
 
     def get_channel_fade(self, area: int, channel: int) -> float:
         """Return the fade of a channel."""
@@ -423,7 +426,10 @@ class DynaliteDevices:
 
     def get_preset_name(self, area: int, preset: int) -> str:
         """Return the name of a preset."""
-        return f"{self._area[area][CONF_NAME]} {self._area[area][CONF_PRESET][preset][CONF_NAME]}"
+        cur_area = self._area.get(area, {})
+        default_area_name = f"Area {area}"
+        default_preset_name = f"Preset {preset}"
+        return f"{cur_area.get(CONF_NAME, default_area_name)} {cur_area.get(CONF_PRESET, {}).get(preset, {}).get(CONF_NAME, default_preset_name)}"
 
     def get_preset_fade(self, area: int, preset: int) -> float:
         """Return the fade of a preset."""
