@@ -63,7 +63,7 @@ class DynaliteConfig:
         temp_active = config.get(CONF_ACTIVE, CONF_ACTIVE_INIT)
         if temp_active is True:
             self.active = CONF_ACTIVE_ON
-        if temp_active is False:
+        elif temp_active is False:
             self.active = CONF_ACTIVE_OFF
         else:
             self.active = temp_active
