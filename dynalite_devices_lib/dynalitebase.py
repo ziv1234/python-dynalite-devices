@@ -1,13 +1,16 @@
 """Support for the Dynalite devices."""
-from typing import Any, Callable, Dict, List
+from typing import TYPE_CHECKING, Callable, Dict, List
 
 from .const import CONF_CHANNEL
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .dynalite_devices import DynaliteDevices
 
 
 class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the entity (light, switch, device, etc.)
     """Base class for Dynalite devices."""
 
-    def __init__(self, area: int, bridge: Any) -> None:
+    def __init__(self, area: int, bridge: "DynaliteDevices") -> None:
         """Initialize the device."""
         self._area = area
         self._bridge = bridge
@@ -38,7 +41,7 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
 class DynaliteChannelBaseDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant device."""
 
-    def __init__(self, area: int, channel: int, bridge: Any) -> None:
+    def __init__(self, area: int, channel: int, bridge: "DynaliteDevices") -> None:
         """Initialize the device."""
         self._channel = channel
         super().__init__(area, bridge)
@@ -66,7 +69,7 @@ class DynaliteChannelBaseDevice(DynaliteBaseDevice):
 class DynaliteMultiDevice(DynaliteBaseDevice):
     """Representation of two Dynalite Presets as an on/off switch."""
 
-    def __init__(self, num_devices: int, area: int, bridge: Any) -> None:
+    def __init__(self, num_devices: int, area: int, bridge: "DynaliteDevices") -> None:
         """Initialize the device."""
         self._devices: Dict[int, DynaliteBaseDevice] = {}
         self._num_devices = num_devices
@@ -77,7 +80,7 @@ class DynaliteMultiDevice(DynaliteBaseDevice):
         """Return the name of the device."""
         return self._bridge.get_multi_name(self._area)
 
-    def get_device(self, devnum: int) -> Any:
+    def get_device(self, devnum: int) -> DynaliteBaseDevice:
         """Get one of the devices."""
         assert devnum in self._devices
         return self._devices[devnum]

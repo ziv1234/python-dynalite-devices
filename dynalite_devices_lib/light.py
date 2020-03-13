@@ -1,15 +1,18 @@
 """Support for Dynalite channels as lights."""
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from .const import ATTR_BRIGHTNESS
 from .dynalitebase import DynaliteChannelBaseDevice
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .dynalite_devices import DynaliteDevices
 
 
 class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Light."""
 
-    def __init__(self, area: int, channel: int, bridge: Any) -> None:
+    def __init__(self, area: int, channel: int, bridge: "DynaliteDevices") -> None:
         """Initialize the light."""
         self._level = 0.0
         self._direction = "stop"

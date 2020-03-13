@@ -1,17 +1,20 @@
 """Support for the Dynalite channels as covers."""
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING
 
 from .const import ATTR_POSITION, ATTR_TILT_POSITION, CONF_TEMPLATE, CONF_TIME_COVER
 from .dynalitebase import DynaliteBaseDevice, DynaliteMultiDevice
 from .light import DynaliteChannelLightDevice
 from .switch import DynalitePresetSwitchDevice
 
+if TYPE_CHECKING:  # pragma: no cover
+    from .dynalite_devices import DynaliteDevices
+
 
 class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover."""
 
-    def __init__(self, area: int, bridge: Any, poll_timer: float) -> None:
+    def __init__(self, area: int, bridge: "DynaliteDevices", poll_timer: float) -> None:
         """Initialize the cover."""
         self._current_position = 0.0
         self._direction = "stop"
@@ -97,13 +100,17 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     async def async_open_cover(self, **kwargs) -> None:
         """Open the cover."""
         # pylint: disable=unused-argument
-        await self.get_device(1).async_turn_on()
+        device = self.get_device(1)
+        assert isinstance(device, DynalitePresetSwitchDevice)
+        await device.async_turn_on()
         self.update_level(self._current_position, 1.0)
 
     async def async_close_cover(self, **kwargs) -> None:
         """Close the cover."""
         # pylint: disable=unused-argument
-        await self.get_device(2).async_turn_on()
+        device = self.get_device(2)
+        assert isinstance(device, DynalitePresetSwitchDevice)
+        await device.async_turn_on()
         self.update_level(self._current_position, 0.0)
 
     async def async_set_cover_position(self, **kwargs) -> None:
@@ -136,7 +143,9 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     async def async_stop_cover(self, **kwargs) -> None:
         """Stop the cover."""
         # pylint: disable=unused-argument
-        await self.get_device(3).async_turn_on()
+        device = self.get_device(3)
+        assert isinstance(device, DynalitePresetSwitchDevice)
+        await device.async_turn_on()
         self.update_level(self._current_position, self._current_position)
 
     def listener(self, device: DynaliteBaseDevice, stop_fade: bool) -> None:
@@ -168,9 +177,9 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
 class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover that uses up and down for tilt."""
 
-    def __init__(self, area: int, bridge: Any, poll_timer: float) -> None:
+    def __init__(self, area: int, bridge: "DynaliteDevices", poll_timer: float) -> None:
         """Initialize the cover."""
-        self._current_tilt = 0
+        self._current_tilt = 0.0
         super().__init__(area, bridge, poll_timer)
 
     @property

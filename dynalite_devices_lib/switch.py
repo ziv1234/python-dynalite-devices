@@ -1,6 +1,6 @@
 """Support for the Dynalite channels and presets as switches."""
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from .const import CONF_PRESET, CONF_ROOM, CONF_TEMPLATE
 from .dynalitebase import (
@@ -9,11 +9,14 @@ from .dynalitebase import (
     DynaliteMultiDevice,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    from .dynalite_devices import DynaliteDevices
+
 
 class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Switch."""
 
-    def __init__(self, area: int, channel: int, bridge: Any) -> None:
+    def __init__(self, area: int, channel: int, bridge: "DynaliteDevices") -> None:
         """Initialize the switch."""
         self._level = 0.0
         super().__init__(area, channel, bridge)
@@ -49,7 +52,7 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
 class DynalitePresetSwitchDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
-    def __init__(self, area: int, preset: int, bridge: Any) -> None:
+    def __init__(self, area: int, preset: int, bridge: "DynaliteDevices") -> None:
         """Initialize the switch."""
         self._preset = preset
         self._level = 0
@@ -102,7 +105,7 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
 class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
-    def __init__(self, area: int, bridge: Any) -> None:
+    def __init__(self, area: int, bridge: "DynaliteDevices") -> None:
         """Initialize the switch."""
         super().__init__(2, area, bridge)
 
@@ -124,14 +127,20 @@ class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
     @property
     def is_on(self) -> bool:
         """Return true if device is on."""
-        return self.get_device(1).is_on
+        device = self.get_device(1)
+        assert isinstance(device, DynalitePresetSwitchDevice)
+        return device.is_on
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn switch on."""
         # pylint: disable=unused-argument
-        await self.get_device(1).async_turn_on()
+        device = self.get_device(1)
+        assert isinstance(device, DynalitePresetSwitchDevice)
+        await device.async_turn_on()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn switch off."""
         # pylint: disable=unused-argument
-        await self.get_device(2).async_turn_on()
+        device = self.get_device(2)
+        assert isinstance(device, DynalitePresetSwitchDevice)
+        await device.async_turn_on()
