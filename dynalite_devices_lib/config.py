@@ -60,11 +60,13 @@ class DynaliteConfig:
         self.port = config.get(CONF_PORT, DEFAULT_PORT)
         self.name = config.get(CONF_NAME, f"{DEFAULT_NAME}-{self.host}")
         self.auto_discover = config.get(CONF_AUTO_DISCOVER, False)
-        self.active = config.get(CONF_ACTIVE, CONF_ACTIVE_INIT)
-        if self.active is True:
+        temp_active = config.get(CONF_ACTIVE, CONF_ACTIVE_INIT)
+        if temp_active is True:
             self.active = CONF_ACTIVE_ON
-        if self.active is False:
+        if temp_active is False:
             self.active = CONF_ACTIVE_OFF
+        else:
+            self.active = temp_active
         self.poll_timer = config.get(CONF_POLL_TIMER, 1.0)
         self.default_fade = config.get(CONF_DEFAULT, {}).get(CONF_FADE, 0)
         # create the templates

@@ -66,14 +66,18 @@ class BridgeError(Exception):
 class DynaliteDevices:
     """Manages a single Dynalite bridge."""
 
-    def __init__(self, new_device_func: Callable, update_device_func: Callable) -> None:
+    def __init__(
+        self,
+        new_device_func: Callable[[List[DynaliteBaseDevice]], None],
+        update_device_func: Callable[[Union[DynaliteBaseDevice, str]], None],
+    ) -> None:
         """Initialize the system."""
         self._host = ""
         self._port = 0
         self.name = None  # public
         self._poll_timer = 0.0
         self._default_fade = 0.0
-        self._active = False
+        self._active = ""
         self._auto_discover = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._new_device_func = new_device_func
@@ -86,7 +90,7 @@ class DynaliteDevices:
         self._added_time_covers: Dict[int, Any] = {}
         self._waiting_devices: List[DynaliteBaseDevice] = []
         self._timer_active = False
-        self._timer_callbacks: Set[Callable] = set()
+        self._timer_callbacks: Set[Callable[[], None]] = set()
         self._area: Dict[int, Any] = {}
         self._dynalite = Dynalite(broadcast_func=self.handle_event)
         self._resetting = False
@@ -372,7 +376,7 @@ class DynaliteDevices:
                 channel_to_set.stop_fade()
                 self.update_device(channel_to_set)
 
-    def add_timer_listener(self, callback_func: Callable) -> None:
+    def add_timer_listener(self, callback_func: Callable[[], None]) -> None:
         """Add a listener to the timer and start if needed."""
         self._timer_callbacks.add(callback_func)
         if not self._timer_active:
@@ -380,7 +384,7 @@ class DynaliteDevices:
             self._loop.call_later(self._poll_timer, self.timer_func)
             self._timer_active = True
 
-    def remove_timer_listener(self, callback_func: Callable) -> None:
+    def remove_timer_listener(self, callback_func: Callable[[], None]) -> None:
         """Remove a listener from a timer."""
         self._timer_callbacks.discard(callback_func)
 
@@ -451,7 +455,7 @@ class DynaliteDevices:
             master_area = override_area if override_area.lower() != CONF_NONE else ""
         return master_area
 
-    async def async_reset(self):
+    async def async_reset(self) -> None:
         """Reset the connections and timers."""
         self._resetting = True
         await self._dynalite.async_reset()

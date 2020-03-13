@@ -11,7 +11,7 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
         """Initialize the device."""
         self._area = area
         self._bridge = bridge
-        self._listeners: List[Callable] = []
+        self._listeners: List[Callable[[DynaliteBaseDevice, bool], None]] = []
 
     @property
     def area_name(self) -> str:
@@ -23,7 +23,9 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
         """Get the master area when combining entities from different Dynet areas to the same area."""
         return self._bridge.get_master_area(self._area)
 
-    def add_listener(self, listener: Callable) -> None:
+    def add_listener(
+        self, listener: Callable[["DynaliteBaseDevice", bool], None]
+    ) -> None:
         """Add a listener for changes."""
         self._listeners.append(listener)
 

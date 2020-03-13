@@ -10,7 +10,7 @@ Manage a Dynalite connection.
 
 import asyncio
 import time
-from typing import Callable, List, Optional
+from typing import Awaitable, Callable, List, Optional
 
 from .const import (
     CONF_ACTION,
@@ -36,7 +36,7 @@ from .opcodes import SyncType
 class Dynalite:
     """Class to represent the interaction with Dynalite."""
 
-    def __init__(self, broadcast_func: Callable) -> None:
+    def __init__(self, broadcast_func: Callable[[DynetEvent], None]) -> None:
         """Initialize the class."""
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._broadcast_func = broadcast_func
@@ -47,7 +47,7 @@ class Dynalite:
         self._reader: Optional[asyncio.StreamReader] = None
         self._writer: Optional[asyncio.StreamWriter] = None
         self._resetting = False
-        self._reader_future: Optional[asyncio.Task] = None
+        self._reader_future: Optional[Awaitable[None]] = None
 
     async def connect_internal(self, host: str, port: int) -> bool:
         """Create the actual connection to Dynet."""
@@ -234,7 +234,7 @@ class Dynalite:
             assert self._loop
             self._loop.call_later(self._message_delay, self.write)
 
-    async def async_reset(self):
+    async def async_reset(self) -> None:
         """Close sockets and timers."""
         self._resetting = True
         # Wait for reader to also close

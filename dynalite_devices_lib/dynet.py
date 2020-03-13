@@ -9,7 +9,7 @@ Library to handle Dynet networks.
 """
 
 import json
-from typing import List
+from typing import List, Optional
 
 from .opcodes import OpcodeType, SyncType
 
@@ -69,14 +69,14 @@ class DynetPacket:
                 )
 
     @property
-    def opcode_type(self):
+    def opcode_type(self) -> Optional[str]:
         """Return the alphabetic representation of the opcode if known or None."""
         if OpcodeType.has_value(self.command):
             return OpcodeType(self.command).name
         return None
 
     @property
-    def msg(self):
+    def msg(self) -> bytearray:
         """Get the byte array for the message to send."""
         return bytearray(self._msg)
 
