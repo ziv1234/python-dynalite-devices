@@ -14,9 +14,9 @@ def preset_select_func(area, preset):
 
 def linear_func(area, preset):
     """Create preset linear fade packet."""
-    packet = DynetPacket()
-    packet.to_msg(area, OpcodeType.LINEAR_PRESET.value, [preset - 1, 0, 0])
-    return packet
+    return DynetPacket(
+        area=area, command=OpcodeType.LINEAR_PRESET.value, data=[preset - 1, 0, 0]
+    )
 
 
 def report_func(area, preset):
