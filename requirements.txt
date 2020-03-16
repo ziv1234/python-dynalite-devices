@@ -4,3 +4,7 @@ pytest-asyncio
 asynctest
 pre-commit
 mypy
+setuptools
+wheel
+twine
+
