@@ -20,3 +20,4 @@ build/lib/dynalite_devices_lib/cover.py
 build/lib/dynalite_devices_lib/__version__.py
 build
 dist
+monkeytype.sqlite3
