@@ -215,8 +215,7 @@ async def test_dynalite_unhandled_message(mock_gateway):
     )
     assert await mock_gateway.async_setup_dyn_dev()
     assert not device.is_on
-    packet = DynetPacket()
-    packet.to_msg(1, 45, [0, 0, 0])
+    packet = DynetPacket(area=1, command=45, data=[0, 0, 0])
     await mock_gateway.receive(packet)
     assert not device.is_on
     await mock_gateway.receive(DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5))
@@ -235,8 +234,7 @@ async def test_dynalite_unknown_message(mock_gateway):
     )
     assert await mock_gateway.async_setup_dyn_dev()
     assert not device.is_on
-    packet = DynetPacket()
-    packet.to_msg(1, 200, [0, 0, 0])
+    packet = DynetPacket(area=1, command=200, data=[0, 0, 0])
     await mock_gateway.receive(packet)
     assert not device.is_on
     await mock_gateway.receive(DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5))

@@ -20,6 +20,7 @@ class MockGateway:
         self.in_buffer = bytearray()
         self.new_dev_func = Mock()
         self.update_dev_func = Mock()
+        self.exceptions = []
         if message_delay_zero:
             with patch("dynalite_devices_lib.dynalite.MESSAGE_DELAY", 0):
                 self.dyn_dev = DynaliteDevices(
@@ -58,7 +59,13 @@ class MockGateway:
 
     async def async_setup_server(self):
         """Start the server."""
-        asyncio.get_event_loop().create_task(self.run_server())
+
+        def exc_handle(loop, context):
+            """Handle exceptions by rethrowing them, which will fail the test."""
+            self.exceptions.append(context["exception"])
+
+        asyncio.get_event_loop().set_exception_handler(exc_handle)
+        asyncio.create_task(self.run_server())
         await asyncio.sleep(0.01)
 
     async def check_writes(self, packets):
@@ -122,6 +129,8 @@ class MockGateway:
     def fin(self):
         """Run shutdown async."""
         asyncio.get_event_loop().run_until_complete(self.async_fin())
+        for ex in self.exceptions:
+            raise ex
 
 
 @pytest.fixture()

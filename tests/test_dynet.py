@@ -7,8 +7,7 @@ from dynalite_devices_lib.dynet import DynetPacket, PacketError
 
 def test_packet_lengths():
     """Test what happens when creating a packet of size not equal to 8."""
-    packet = DynetPacket()
-    packet.to_msg(3, 6, [1, 2, 3])
+    packet = DynetPacket(area=3, command=6, data=[1, 2, 3])
     with pytest.raises(PacketError):
         DynetPacket(packet.msg[0:7])
     with pytest.raises(PacketError):

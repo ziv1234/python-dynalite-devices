@@ -104,7 +104,6 @@ async def test_cover_no_tilt(mock_gateway):
     assert cover_device.current_cover_position == 0
     # Now open it half-way
     await cover_device.async_set_cover_position(position=50)
-    await asyncio.sleep(0.25)
     assert (
         not cover_device.is_closed
         and not cover_device.is_opening
@@ -112,7 +111,6 @@ async def test_cover_no_tilt(mock_gateway):
     )
     assert 40 < cover_device.current_cover_position < 60
     await cover_device.async_set_cover_position(position=25)
-    await asyncio.sleep(0.3)
     assert (
         not cover_device.is_closed
         and not cover_device.is_opening
@@ -191,14 +189,19 @@ async def test_cover_with_tilt(mock_gateway):
     # It is closed. Let's open
     assert cover_device.is_closed
     assert cover_device.current_cover_tilt_position == 0
-    asyncio.get_event_loop().create_task(cover_device.async_open_cover_tilt())
+    asyncio.create_task(cover_device.async_open_cover_tilt())
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 1, 0)
     )
     await asyncio.sleep(0.125)
     assert cover_device.is_opening
     assert 30 < cover_device.current_cover_tilt_position < 70
-    await asyncio.sleep(0.3)
+    # Stop halfway
+    await cover_device.async_stop_cover_tilt()
+    await mock_gateway.check_single_write(
+        DynetPacket.select_area_preset_packet(1, 3, 0)
+    )
+    await cover_device.async_open_cover_tilt()
     assert cover_device.current_cover_tilt_position == 100
     assert 30 < cover_device.current_cover_position < 70
     assert (
@@ -206,12 +209,13 @@ async def test_cover_with_tilt(mock_gateway):
         and not cover_device.is_opening
         and not cover_device.is_closing
     )
+    await asyncio.sleep(0.1)
     mock_gateway.reset()
-    asyncio.get_event_loop().create_task(cover_device.async_open_cover_tilt())
+    asyncio.create_task(cover_device.async_open_cover_tilt())
     await mock_gateway.check_writes([])
     # It is open. Now let's close
     mock_gateway.reset()
-    asyncio.get_event_loop().create_task(cover_device.async_close_cover_tilt())
+    asyncio.create_task(cover_device.async_close_cover_tilt())
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 2, 0)
     )
@@ -238,7 +242,7 @@ async def test_cover_with_tilt(mock_gateway):
     assert cover_device.is_closed
     assert cover_device.current_cover_tilt_position == 0
     mock_gateway.reset()
-    asyncio.get_event_loop().create_task(cover_device.async_close_cover_tilt())
+    asyncio.create_task(cover_device.async_close_cover_tilt())
     await mock_gateway.check_writes([])
     # Now open it half-way
     await cover_device.async_set_cover_tilt_position(tilt_position=50)

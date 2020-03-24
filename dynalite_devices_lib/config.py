@@ -1,5 +1,7 @@
 """Configure the areas, presets, and channels."""
 
+from typing import Any, Dict, Union
+
 from .const import (
     CONF_ACTIVE,
     CONF_ACTIVE_INIT,
@@ -51,23 +53,26 @@ TIME_COVER_VALUE_CONFS = [CONF_DEVICE_CLASS, CONF_DURATION, CONF_TILT_TIME]
 class DynaliteConfig:
     """Configure the Dynalite bridge."""
 
-    def __init__(self, config):
+    def __init__(self, config: Dict[str, Any]) -> None:
         """Configure the Dynalite bridge."""
         # insert the global values
         self.host = config.get(CONF_HOST, "localhost")  # Default value for testing
         self.port = config.get(CONF_PORT, DEFAULT_PORT)
         self.name = config.get(CONF_NAME, f"{DEFAULT_NAME}-{self.host}")
         self.auto_discover = config.get(CONF_AUTO_DISCOVER, False)
-        self.active = config.get(CONF_ACTIVE, CONF_ACTIVE_INIT)
-        if self.active is True:
+        temp_active = config.get(CONF_ACTIVE, CONF_ACTIVE_INIT)
+        if temp_active is True:
             self.active = CONF_ACTIVE_ON
-        if self.active is False:
+        elif temp_active is False:
             self.active = CONF_ACTIVE_OFF
+        else:
+            self.active = temp_active
         self.poll_timer = config.get(CONF_POLL_TIMER, 1.0)
         self.default_fade = config.get(CONF_DEFAULT, {}).get(CONF_FADE, 0)
         # create the templates
         config_templates = config.get(CONF_TEMPLATE, {})
-        templates = {}
+        templates: Dict[str, Dict[str, Union[str, int]]] = {}
+        # for template in DEFAULT_TEMPLATES:
         for template in DEFAULT_TEMPLATES:
             templates[template] = {}
             cur_template = config_templates.get(template, {})
@@ -93,7 +98,12 @@ class DynaliteConfig:
             )
 
     @staticmethod
-    def configure_preset(preset, preset_config, default_fade, hidden=False):
+    def configure_preset(
+        preset: int,
+        preset_config: Dict[str, Union[float, str]],
+        default_fade: float,
+        hidden: bool = False,
+    ) -> Dict[str, Union[str, float, bool]]:
         """Return the configuration of a preset."""
         result = {
             CONF_NAME: preset_config.get(CONF_NAME, f"Preset {preset}"),
@@ -104,7 +114,12 @@ class DynaliteConfig:
         return result
 
     @staticmethod
-    def configure_channel(channel, channel_config, default_fade, hidden=False):
+    def configure_channel(
+        channel: int,
+        channel_config: Dict[str, Union[float, str]],
+        default_fade: float,
+        hidden: bool = False,
+    ) -> Dict[str, Union[str, float, bool]]:
         """Return the configuration of a channel."""
         result = {
             CONF_NAME: channel_config.get(CONF_NAME, f"Channel {channel}"),
@@ -118,7 +133,13 @@ class DynaliteConfig:
         return result
 
     @staticmethod
-    def configure_area(area, area_config, default_fade, templates, default_presets):
+    def configure_area(
+        area: int,
+        area_config: Dict[str, Any],
+        default_fade: float,
+        templates: Dict[str, Dict[str, Union[str, int]]],
+        default_presets: Dict[int, Any],
+    ) -> Dict[str, Any]:
         """Return the configuration of an area."""
         result = {
             CONF_NAME: area_config.get(CONF_NAME, f"Area {area}"),
