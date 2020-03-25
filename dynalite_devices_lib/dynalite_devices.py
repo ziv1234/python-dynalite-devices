@@ -54,15 +54,6 @@ from .switch import (
 )
 
 
-class BridgeError(Exception):
-    """For errors in the Dynalite bridge."""
-
-    def __init__(self, message: str) -> None:
-        """Initialize the exception."""
-        self.message = message
-        super().__init__(message)
-
-
 class DynaliteDevices:
     """Manages a single Dynalite bridge."""
 
@@ -242,12 +233,6 @@ class DynaliteDevices:
         # if already configured, ignore
         if self._added_presets.get(area, {}).get(preset, False):
             return
-        # if no autodiscover and not in config, ignore
-        if not self._auto_discover:
-            if not self._area.get(area, {}).get(CONF_PRESET, {}).get(preset, False):
-                raise BridgeError(
-                    f"No auto discovery and unknown preset (area {area} preset {preset}"
-                )
         self.ensure_area(area)
         area_config = self._area[area]
         if preset not in area_config[CONF_PRESET]:
@@ -255,7 +240,7 @@ class DynaliteDevices:
                 preset,
                 {},
                 area_config[CONF_FADE],
-                area_config.get(CONF_TEMPLATE, False),
+                CONF_TEMPLATE in area_config or not self._auto_discover,
             )
             # if the area is a template is a template, new presets should be hidden
             if area_config.get(CONF_TEMPLATE, False):
@@ -277,11 +262,7 @@ class DynaliteDevices:
         LOGGER.debug("handle_preset_selection - event=%s", event.data)
         area = event.data[CONF_AREA]
         preset = event.data[CONF_PRESET]
-        try:
-            self.create_preset_if_new(area, preset)
-        except BridgeError:
-            # Unknown and no autodiscover
-            return
+        self.create_preset_if_new(area, preset)
         # Update all the preset devices
         for cur_preset_in_area in self._added_presets[area]:
             device = self._added_presets[area][cur_preset_in_area]
@@ -301,12 +282,6 @@ class DynaliteDevices:
         # if already configured, ignore
         if self._added_channels.get(area, {}).get(channel, False):
             return
-        # if no autodiscover and not in config, ignore
-        if not self._auto_discover:
-            if not self._area.get(area, {}).get(CONF_CHANNEL, {}).get(channel, False):
-                raise BridgeError(
-                    f"No auto discovery and unknown channel (area {area} channel {channel}"
-                )
         self.ensure_area(area)
         area_config = self._area[area]
         if channel not in area_config[CONF_CHANNEL]:
@@ -314,7 +289,7 @@ class DynaliteDevices:
                 channel,
                 {},
                 area_config[CONF_FADE],
-                area_config.get(CONF_TEMPLATE, False),
+                CONF_TEMPLATE in area_config or not self._auto_discover,
             )
         channel_config = area_config[CONF_CHANNEL][channel]
         LOGGER.debug("create_channel_if_new - channel_config=%s", channel_config)
@@ -345,11 +320,7 @@ class DynaliteDevices:
         area = event.data[CONF_AREA]
         channel = event.data[CONF_CHANNEL]
         if channel != CONF_ALL:
-            try:
-                self.create_channel_if_new(area, channel)
-            except BridgeError:
-                # Unknown and no autodiscover
-                return
+            self.create_channel_if_new(area, channel)
         action = event.data[CONF_ACTION]
         if action == CONF_ACTION_REPORT:
             actual_level = (255 - event.data[CONF_ACT_LEVEL]) / 254

@@ -182,3 +182,5 @@ async def test_trigger_switch(mock_gateway):
         DynetPacket.select_area_preset_packet(1, 1, 0)
     )
     assert trigger_device.is_on
+    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 4))
+    assert not trigger_device.is_on
