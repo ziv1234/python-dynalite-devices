@@ -169,9 +169,17 @@ class DynaliteConfig:
                 preset = int(area_config.get(conf, templates[template][conf]))
                 result[conf] = preset
                 if preset not in area_presets:
-                    area_presets[preset] = DynaliteConfig.configure_preset(
-                        preset, {}, result[CONF_FADE], template != CONF_TRIGGER
-                    )
+                    if template == CONF_TRIGGER:
+                        area_presets[preset] = DynaliteConfig.configure_preset(
+                            preset,
+                            {CONF_NAME: result[CONF_NAME]},
+                            result[CONF_FADE],
+                            False,
+                        )
+                    else:
+                        area_presets[preset] = DynaliteConfig.configure_preset(
+                            preset, {}, result[CONF_FADE], True
+                        )
         if template == CONF_TIME_COVER:  # time cover also has non-preset conf
             for conf in TIME_COVER_VALUE_CONFS:
                 result[conf] = area_config.get(conf, templates[template][conf])

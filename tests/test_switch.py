@@ -154,3 +154,31 @@ async def test_room_switch(mock_gateway):
     assert not room_device.is_on
     assert not on_device.is_on
     assert off_device.is_on
+
+
+@pytest.mark.asyncio
+async def test_trigger_switch(mock_gateway):
+    """Test a switch that is a single trigger."""
+    name = "NAME"
+    [trigger_device] = mock_gateway.configure_dyn_dev(
+        {
+            dyn_const.CONF_ACTIVE: False,
+            dyn_const.CONF_AREA: {
+                "1": {
+                    dyn_const.CONF_NAME: name,
+                    dyn_const.CONF_TEMPLATE: dyn_const.CONF_TRIGGER,
+                }
+            },
+        },
+        1,
+    )
+    assert await mock_gateway.async_setup_dyn_dev()
+    assert trigger_device.category == "switch"
+    assert trigger_device.name == name
+    assert trigger_device.unique_id == "dynalite_area_1_preset_1"
+    assert trigger_device.available
+    await trigger_device.async_turn_on()
+    await mock_gateway.check_single_write(
+        DynetPacket.select_area_preset_packet(1, 1, 0)
+    )
+    assert trigger_device.is_on

@@ -427,9 +427,16 @@ class DynaliteDevices:
     def get_preset_name(self, area: int, preset: int) -> str:
         """Return the name of a preset."""
         cur_area = self._area.get(area, {})
-        default_area_name = f"Area {area}"
-        default_preset_name = f"Preset {preset}"
-        return f"{cur_area.get(CONF_NAME, default_area_name)} {cur_area.get(CONF_PRESET, {}).get(preset, {}).get(CONF_NAME, default_preset_name)}"
+        area_name = cur_area.get(CONF_NAME, f"Area {area}")
+        preset_name = (
+            cur_area.get(CONF_PRESET, {})
+            .get(preset, {})
+            .get(CONF_NAME, f"Preset {preset}")
+        )
+        if area_name == preset_name:
+            return preset_name
+        else:
+            return f"{area_name} {preset_name}"
 
     def get_preset_fade(self, area: int, preset: int) -> float:
         """Return the fade of a preset."""
