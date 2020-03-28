@@ -406,8 +406,7 @@ class DynaliteDevices:
         )
         if area_name == preset_name:
             return preset_name
-        else:
-            return f"{area_name} {preset_name}"
+        return f"{area_name} {preset_name}"
 
     def get_preset_fade(self, area: int, preset: int) -> float:
         """Return the fade of a preset."""
