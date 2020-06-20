@@ -5,14 +5,13 @@ from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 from .config import DynaliteConfig
 from .const import (
+    ACTIVE_INIT,
+    ACTIVE_ON,
     CONF_ACT_LEVEL,
     CONF_ACTION,
     CONF_ACTION_CMD,
     CONF_ACTION_REPORT,
     CONF_ACTION_STOP,
-    CONF_ACTIVE_INIT,
-    CONF_ACTIVE_ON,
-    CONF_ALL,
     CONF_AREA,
     CONF_AREA_OVERRIDE,
     CONF_CHANNEL,
@@ -60,7 +59,7 @@ class DynaliteDevices:
     def __init__(
         self,
         new_device_func: Callable[[List[DynaliteBaseDevice]], None],
-        update_device_func: Callable[[Union[DynaliteBaseDevice, str]], None],
+        update_device_func: Callable[[Optional[DynaliteBaseDevice]], None],
     ) -> None:
         """Initialize the system."""
         self._host = ""
@@ -111,11 +110,11 @@ class DynaliteDevices:
         self._area = configurator.area
         # now register the channels and presets and ask for initial status if needed
         for area in self._area:
-            if self._active in [CONF_ACTIVE_INIT, CONF_ACTIVE_ON]:
+            if self._active in [ACTIVE_INIT, ACTIVE_ON]:
                 self._dynalite.request_area_preset(area)
             for channel in self._area[area][CONF_CHANNEL]:
                 self.create_channel_if_new(area, channel)
-                if self._active in [CONF_ACTIVE_INIT, CONF_ACTIVE_ON]:
+                if self._active in [ACTIVE_INIT, ACTIVE_ON]:
                     self._dynalite.request_channel_level(area, channel)
             for preset in self._area[area][CONF_PRESET]:
                 self.create_preset_if_new(area, preset)
@@ -195,7 +194,7 @@ class DynaliteDevices:
         assert conf == CONF_TEMPLATE
         return self._area.get(area, {}).get(CONF_TEMPLATE, "") == item_num
 
-    def update_device(self, device: Union[DynaliteBaseDevice, str]) -> None:
+    def update_device(self, device: Optional[DynaliteBaseDevice] = None) -> None:
         """Update one or more devices."""
         self._update_device_func(device)
 
@@ -205,11 +204,11 @@ class DynaliteDevices:
         if event.event_type == EVENT_CONNECTED:
             LOGGER.debug("Received CONNECTED message")
             self.connected = True
-            self.update_device(CONF_ALL)
+            self.update_device()
         elif event.event_type == EVENT_DISCONNECTED:
             LOGGER.debug("Received DISCONNECTED message")
             self.connected = False
-            self.update_device(CONF_ALL)
+            self.update_device()
         elif event.event_type == EVENT_PRESET:
             LOGGER.debug("Received PRESET message")
             self.handle_preset_selection(event)
@@ -272,7 +271,7 @@ class DynaliteDevices:
                 device.set_level(0)
             self.update_device(device)
         # If active is set to full, query all channels in the area
-        if self._active == CONF_ACTIVE_ON:
+        if self._active == ACTIVE_ON:
             for channel in self._area[area].get(CONF_CHANNEL, {}):
                 self._dynalite.request_channel_level(area, channel)
 
@@ -318,8 +317,8 @@ class DynaliteDevices:
         assert event.data
         LOGGER.debug("handle_channel_change - data=%s", event.data)
         area = event.data[CONF_AREA]
-        channel = event.data[CONF_CHANNEL]
-        if channel != CONF_ALL:
+        channel = event.data.get(CONF_CHANNEL, None)
+        if channel:
             self.create_channel_if_new(area, channel)
         action = event.data[CONF_ACTION]
         if action == CONF_ACTION_REPORT:
@@ -337,15 +336,15 @@ class DynaliteDevices:
             self.update_device(channel_to_set)
         else:
             assert action == CONF_ACTION_STOP
-            if channel == CONF_ALL:
+            if channel:
+                channel_to_set = self._added_channels[area][channel]
+                channel_to_set.stop_fade()
+                self.update_device(channel_to_set)
+            else:
                 for channel in self._added_channels.get(area, {}):
                     channel_to_set = self._added_channels[area][channel]
                     channel_to_set.stop_fade()
                     self.update_device(channel_to_set)
-            else:
-                channel_to_set = self._added_channels[area][channel]
-                channel_to_set.stop_fade()
-                self.update_device(channel_to_set)
 
     def add_timer_listener(self, callback_func: Callable[[], None]) -> None:
         """Add a listener to the timer and start if needed."""

@@ -8,15 +8,12 @@ Class that handles inbound requests on the Dynet network and fires events.
 @ Notes:        Requires a RS485 to IP gateway (Do not use the Dynalite one - use something cheaper)
 """
 
-from typing import Union
-
 from .const import (
     CONF_ACT_LEVEL,
     CONF_ACTION,
     CONF_ACTION_CMD,
     CONF_ACTION_REPORT,
     CONF_ACTION_STOP,
-    CONF_ALL,
     CONF_AREA,
     CONF_CHANNEL,
     CONF_FADE,
@@ -158,14 +155,8 @@ class DynetInbound:
     @staticmethod
     def stop_fading(packet: DynetPacket) -> DynetEvent:
         """Report that fading stopped for a channel or area."""
-        channel: Union[int, str] = packet.data[0] + 1
-        if channel == 256:  # all channels in area
-            channel = CONF_ALL
-        return DynetEvent(
-            event_type=EVENT_CHANNEL,
-            data={
-                CONF_AREA: packet.area,
-                CONF_CHANNEL: channel,
-                CONF_ACTION: CONF_ACTION_STOP,
-            },
-        )
+        data = {CONF_AREA: packet.area, CONF_ACTION: CONF_ACTION_STOP}
+        channel = packet.data[0] + 1
+        if channel != 256:  # all channels in area
+            data[CONF_CHANNEL] = channel
+        return DynetEvent(event_type=EVENT_CHANNEL, data=data)

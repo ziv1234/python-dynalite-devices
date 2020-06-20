@@ -21,7 +21,7 @@ async def test_empty_dynalite_devices(mock_gateway):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("active", [False, dyn_const.CONF_ACTIVE_INIT, True])
+@pytest.mark.parametrize("active", [False, dyn_const.ACTIVE_INIT, True])
 async def test_dynalite_devices_active(mock_gateway, active):
     """Test with active set to ON."""
     mock_gateway.configure_dyn_dev(

@@ -3,10 +3,10 @@
 from typing import Any, Dict, Union
 
 from .const import (
+    ACTIVE_INIT,
+    ACTIVE_OFF,
+    ACTIVE_ON,
     CONF_ACTIVE,
-    CONF_ACTIVE_INIT,
-    CONF_ACTIVE_OFF,
-    CONF_ACTIVE_ON,
     CONF_AREA,
     CONF_AREA_OVERRIDE,
     CONF_AUTO_DISCOVER,
@@ -60,11 +60,11 @@ class DynaliteConfig:
         self.port = config.get(CONF_PORT, DEFAULT_PORT)
         self.name = config.get(CONF_NAME, f"{DEFAULT_NAME}-{self.host}")
         self.auto_discover = config.get(CONF_AUTO_DISCOVER, False)
-        temp_active = config.get(CONF_ACTIVE, CONF_ACTIVE_INIT)
+        temp_active = config.get(CONF_ACTIVE, ACTIVE_INIT)
         if temp_active is True:
-            self.active = CONF_ACTIVE_ON
+            self.active = ACTIVE_ON
         elif temp_active is False:
-            self.active = CONF_ACTIVE_OFF
+            self.active = ACTIVE_OFF
         else:
             self.active = temp_active
         self.poll_timer = config.get(CONF_POLL_TIMER, 1.0)
