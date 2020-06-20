@@ -1,23 +1,10 @@
 
-dynalite_devices.egg-info/dependency_links.txt
-dynalite_devices.egg-info/PKG-INFO
-dynalite_devices.egg-info/requires.txt
-dynalite_devices.egg-info/SOURCES.txt
-dynalite_devices.egg-info/top_level.txt
+dynalite_devices.egg-info
 *.whl
-dist/dynalite_devices-0.1.1.tar.gz
 *.pyc
 *.gz
 *.gz
-dist/dynalite_devices-0.1.6.tar.gz
-build/lib/dynalite_devices_lib/__version__.py
-build/lib/dynalite_devices_lib/dynalite_devices.py
-build/lib/dynalite_devices_lib/__version__.py
-build/lib/dynalite_devices_lib/__version__.py
-build/lib/dynalite_devices_lib/cover.py
-build/lib/dynalite_devices_lib/cover.py
-build/lib/dynalite_devices_lib/cover.py
-build/lib/dynalite_devices_lib/__version__.py
 build
 dist
 monkeytype.sqlite3
+.mypy_cache

@@ -114,7 +114,10 @@ class DynaliteDevices:
                 self._dynalite.request_area_preset(area)
             for channel in self._area[area][CONF_CHANNEL]:
                 self.create_channel_if_new(area, channel)
-                if CONF_TEMPLATE not in self._area[area] or self._area[area][CONF_TEMPLATE] != CONF_TIME_COVER:
+                if (
+                    CONF_TEMPLATE not in self._area[area]
+                    or self._area[area][CONF_TEMPLATE] != CONF_TIME_COVER
+                ):
                     if self._active in [ACTIVE_INIT, ACTIVE_ON]:
                         self._dynalite.request_channel_level(area, channel)
             for preset in self._area[area][CONF_PRESET]:

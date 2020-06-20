@@ -1,7 +1,9 @@
 {
     "python.pythonPath": "/home/ziv/dyn_dev/bin/python",
     "python.venvPath": "/home/ziv/dyn_dev/",
-    "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
-    "python.linting.flake8Enabled": false
+    "python.linting.pylintEnabled": true,
+    "python.linting.pydocstyleEnabled": true,
+    "python.linting.mypyEnabled": true,
+    "python.linting.flake8Enabled": true
 }
