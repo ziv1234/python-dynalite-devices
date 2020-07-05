@@ -163,3 +163,17 @@ class DynetPacket:
         return DynetPacket(
             area=area, command=OpcodeType.REPORT_PRESET.value, data=[preset - 1, 0, 0]
         )
+
+    @staticmethod
+    def fade_area_channel_preset_packet(
+        area: int, channel: int, preset: int, fade: float
+    ) -> "DynetPacket":
+        """Create a packet that reports the current preset in an area."""
+        fade_time = int(fade / 0.02)
+        if (fade_time) > 0xFF:
+            fade_time = 0xFF
+        return DynetPacket(
+            area=area,
+            command=OpcodeType.FADE_CHANNEL_AREA_TO_PRESET.value,
+            data=[channel - 1, preset - 1, fade_time],
+        )

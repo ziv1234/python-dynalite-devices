@@ -10,6 +10,7 @@ from .const import (
     CONF_ACT_LEVEL,
     CONF_ACTION,
     CONF_ACTION_CMD,
+    CONF_ACTION_PRESET,
     CONF_ACTION_REPORT,
     CONF_ACTION_STOP,
     CONF_AREA,
@@ -22,6 +23,7 @@ from .const import (
     CONF_DURATION,
     CONF_FADE,
     CONF_HIDDEN_ENTITY,
+    CONF_LEVEL,
     CONF_NAME,
     CONF_NONE,
     CONF_OPEN_PRESET,
@@ -334,12 +336,10 @@ class DynaliteDevices:
         elif action == CONF_ACTION_CMD:
             target_level = (255 - event.data[CONF_TRGT_LEVEL]) / 254
             # when there is only a "set channel level" command, assume that this is both the actual and the target
-            actual_level = target_level
             channel_to_set = self._added_channels[area][channel]
-            channel_to_set.update_level(actual_level, target_level)
+            channel_to_set.update_level(target_level, target_level)
             self.update_device(channel_to_set)
-        else:
-            assert action == CONF_ACTION_STOP
+        elif action == CONF_ACTION_STOP:
             if channel:
                 channel_to_set = self._added_channels[area][channel]
                 channel_to_set.stop_fade()
@@ -349,6 +349,17 @@ class DynaliteDevices:
                     channel_to_set = self._added_channels[area][channel]
                     channel_to_set.stop_fade()
                     self.update_device(channel_to_set)
+        else:
+            assert action == CONF_ACTION_PRESET
+            assert channel  # XXX - not handling for all channels
+            area_config = self._area[area]
+            area_preset = area_config.get(CONF_PRESET, {})
+            preset_num = event.data[CONF_PRESET]
+            target_level = area_preset.get(preset_num, {}).get(CONF_LEVEL, -1)
+            if target_level != -1:
+                channel_to_set = self._added_channels[area][channel]
+                channel_to_set.update_level(target_level, target_level)
+                self.update_device(channel_to_set)
 
     def add_timer_listener(self, callback_func: Callable[[], None]) -> None:
         """Add a listener to the timer and start if needed."""

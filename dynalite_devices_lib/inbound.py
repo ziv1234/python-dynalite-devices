@@ -12,6 +12,7 @@ from .const import (
     CONF_ACT_LEVEL,
     CONF_ACTION,
     CONF_ACTION_CMD,
+    CONF_ACTION_PRESET,
     CONF_ACTION_REPORT,
     CONF_ACTION_STOP,
     CONF_AREA,
@@ -156,6 +157,21 @@ class DynetInbound:
     def stop_fading(packet: DynetPacket) -> DynetEvent:
         """Report that fading stopped for a channel or area."""
         data = {CONF_AREA: packet.area, CONF_ACTION: CONF_ACTION_STOP}
+        channel = packet.data[0] + 1
+        if channel != 256:  # all channels in area
+            data[CONF_CHANNEL] = channel
+        return DynetEvent(event_type=EVENT_CHANNEL, data=data)
+
+    @staticmethod
+    def fade_channel_area_to_preset(packet: DynetPacket) -> DynetEvent:
+        """Report that fading stopped for a channel or area XXX."""
+        fade = packet.data[2] * 0.02
+        data = {
+            CONF_AREA: packet.area,
+            CONF_ACTION: CONF_ACTION_PRESET,
+            CONF_PRESET: packet.data[1] + 1,
+            CONF_FADE: fade,
+        }
         channel = packet.data[0] + 1
         if channel != 256:  # all channels in area
             data[CONF_CHANNEL] = channel

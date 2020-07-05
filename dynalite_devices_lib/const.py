@@ -11,6 +11,7 @@ CONF_ACTION = "action"
 CONF_ACTION_CMD = "cmd"
 CONF_ACTION_REPORT = "report"
 CONF_ACTION_STOP = "stop"
+CONF_ACTION_PRESET = "preset"
 CONF_ACTIVE = "active"
 ACTIVE_INIT = "init"
 ACTIVE_OFF = "off"
@@ -28,6 +29,7 @@ CONF_DURATION = "duration"
 CONF_FADE = "fade"
 CONF_HIDDEN_ENTITY = "hidden"
 CONF_HOST = "host"
+CONF_LEVEL = "level"
 CONF_NAME = "name"
 CONF_NO_DEFAULT = "nodefault"
 CONF_NONE = "none"
@@ -68,8 +70,8 @@ DEFAULT_TEMPLATES: Dict[str, Dict[str, Union[str, int]]] = {
     },
 }
 DEFAULT_PRESETS = {
-    "1": {CONF_NAME: "On"},
-    "4": {CONF_NAME: "Off"},
+    "1": {CONF_NAME: "On", CONF_LEVEL: 1.0},
+    "4": {CONF_NAME: "Off", CONF_LEVEL: 0.0},
 }
 
 EVENT_CHANNEL = "CHANNEL"

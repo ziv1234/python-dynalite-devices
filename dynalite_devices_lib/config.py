@@ -20,6 +20,7 @@ from .const import (
     CONF_FADE,
     CONF_HIDDEN_ENTITY,
     CONF_HOST,
+    CONF_LEVEL,
     CONF_NAME,
     CONF_NO_DEFAULT,
     CONF_OPEN_PRESET,
@@ -109,6 +110,8 @@ class DynaliteConfig:
             CONF_NAME: preset_config.get(CONF_NAME, f"Preset {preset}"),
             CONF_FADE: preset_config.get(CONF_FADE, default_fade),
         }
+        if CONF_LEVEL in preset_config:
+            result[CONF_LEVEL] = preset_config[CONF_LEVEL]
         if hidden:
             result[CONF_HIDDEN_ENTITY] = True
         return result
