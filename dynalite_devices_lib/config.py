@@ -83,7 +83,7 @@ class DynaliteConfig:
                 )
         # create default presets
         config_presets = config.get(CONF_PRESET, DEFAULT_PRESETS)
-        default_presets = {
+        self.default_presets = {
             int(preset): self.configure_preset(
                 preset, config_presets[preset], self.default_fade
             )
@@ -95,7 +95,7 @@ class DynaliteConfig:
             area = int(area_val)
             area_config = config[CONF_AREA].get(area_val)
             self.area[area] = self.configure_area(
-                area, area_config, self.default_fade, templates, default_presets
+                area, area_config, self.default_fade, templates, self.default_presets
             )
 
     @staticmethod

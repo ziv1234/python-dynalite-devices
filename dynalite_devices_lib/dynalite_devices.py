@@ -110,6 +110,7 @@ class DynaliteDevices:
         self._poll_timer = configurator.poll_timer
         self._default_fade = configurator.default_fade
         self._area = configurator.area
+        self._default_presets = configurator.default_presets
         # now register the channels and presets and ask for initial status if needed
         for area in self._area:
             if self._active in [ACTIVE_INIT, ACTIVE_ON]:
@@ -243,7 +244,7 @@ class DynaliteDevices:
         if preset not in area_config[CONF_PRESET]:
             area_config[CONF_PRESET][preset] = DynaliteConfig.configure_preset(
                 preset,
-                {},
+                self._default_presets.get(preset, {}),
                 area_config[CONF_FADE],
                 CONF_TEMPLATE in area_config or not self._auto_discover,
             )
