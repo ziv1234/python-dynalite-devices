@@ -29,6 +29,11 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
         return int(self._level * 255)
 
     @property
+    def level(self) -> float:
+        """Return the brightness of this light between 0..255."""
+        return self._level
+
+    @property
     def direction(self) -> str:
         """Return the brightness of this light between 0..1."""
         return self._direction

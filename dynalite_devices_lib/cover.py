@@ -17,6 +17,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     def __init__(self, area: int, bridge: "DynaliteDevices", poll_timer: float) -> None:
         """Initialize the cover."""
         self._current_position = 0.0
+        self._initialized = False
         self._direction = "stop"
         self._poll_timer = poll_timer
         super().__init__(4, area, bridge)
@@ -49,10 +50,22 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     def update_level(self, actual_level: float, target_level: float) -> None:
         """Update the current level."""
         if actual_level == target_level:
+            if not self._initialized:
+                self._current_position = target_level
+                self._initialized = True
             self._direction = "stop"
             self._bridge.remove_timer_listener(self.timer_callback)
-        else:
-            self._direction = "open" if target_level > actual_level else "close"
+        elif target_level > actual_level:
+            if not self._initialized:
+                self._current_position = 1.0
+                self._initialized = True
+            self._direction = "open"
+            self._bridge.add_timer_listener(self.timer_callback)
+        else:  # target_level < actual_level
+            if not self._initialized:
+                self._current_position = 0.0
+                self._initialized = True
+            self._direction = "close"
             self._bridge.add_timer_listener(self.timer_callback)
         self._bridge.update_device(self)
 
@@ -166,7 +179,7 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
             assert device == self.get_device(4)
             assert isinstance(device, DynaliteChannelLightDevice)
             if stop_fade or device.direction == "stop":
-                self.update_level(self._current_position, self._current_position)
+                self.update_level(device.level, device.level)
             elif device.direction == "open":
                 self.update_level(self._current_position, 1.0)
             else:

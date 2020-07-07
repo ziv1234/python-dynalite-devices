@@ -51,6 +51,8 @@ async def test_cover_no_tilt(mock_gateway):
     assert cover_device.get_master_area == name
     assert not cover_device.has_tilt
     assert cover_device.device_class == dyn_const.DEFAULT_COVER_CLASS
+    # Initialize to closed - otherwise it takes the first one as the init status
+    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 2))
     # It is closed. Let's open
     assert cover_device.is_closed
     await cover_device.async_open_cover()
@@ -186,6 +188,8 @@ async def test_cover_with_tilt(mock_gateway):
     assert cover_device.category == "cover"
     assert cover_device.device_class == "blind"
     assert cover_device.has_tilt
+    # Initialize to closed - otherwise it takes the first one as the init status
+    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 2))
     # It is closed. Let's open
     assert cover_device.is_closed
     assert cover_device.current_cover_tilt_position == 0
@@ -277,6 +281,8 @@ async def test_cover_no_channel(mock_gateway):
     )
     assert await mock_gateway.async_setup_dyn_dev()
     assert cover_device.category == "cover"
+    # Initialize to closed - otherwise it takes the first one as the init status
+    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 2))
     # It is closed. Let's open
     assert cover_device.is_closed
     await cover_device.async_open_cover()
