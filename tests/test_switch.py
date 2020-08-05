@@ -4,8 +4,9 @@ import asyncio
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
-from dynalite_devices_lib.dynalite_devices import DynaliteNotification
 from dynalite_devices_lib.dynet import DynetPacket
+
+from .common import packet_notification, preset_notification
 
 
 @pytest.mark.asyncio
@@ -44,6 +45,7 @@ async def test_preset_switch(mock_gateway):
         DynetPacket.select_area_preset_packet(1, 1, 0.5)
     )
     await mock_gateway.check_updates([device1, device4])
+    await mock_gateway.check_notifications([preset_notification(1, 1)])
     assert device1.is_on
     assert not device4.is_on
     await device4.async_turn_on()
@@ -52,6 +54,7 @@ async def test_preset_switch(mock_gateway):
         DynetPacket.select_area_preset_packet(1, 4, 0.7)
     )
     await mock_gateway.check_updates([device1, device4])
+    await mock_gateway.check_notifications([preset_notification(1, 4)])
     assert device4.is_on
     assert not device1.is_on
     await device4.async_turn_off()
@@ -63,12 +66,7 @@ async def test_preset_switch(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([device1, device4])
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 1)]
     )
     assert not device4.is_on
     assert device1.is_on
@@ -76,12 +74,7 @@ async def test_preset_switch(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([device1, device4])
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 4)]
     )
     assert device4.is_on
     assert not device1.is_on
@@ -156,6 +149,7 @@ async def test_room_switch(mock_gateway):
     assert device.available
     await room_device.async_turn_on()
     await mock_gateway.check_updates([on_device, off_device, room_device])
+    await mock_gateway.check_notifications([preset_notification(1, 1)])
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 1, 0)
     )
@@ -164,6 +158,7 @@ async def test_room_switch(mock_gateway):
     assert not off_device.is_on
     await room_device.async_turn_off()
     await mock_gateway.check_updates([on_device, off_device, room_device], True)
+    await mock_gateway.check_notifications([preset_notification(1, 4)])
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 4, 0)
     )
@@ -172,6 +167,7 @@ async def test_room_switch(mock_gateway):
     assert off_device.is_on
     await on_device.async_turn_on()
     await mock_gateway.check_updates([on_device, off_device, room_device], True)
+    await mock_gateway.check_notifications([preset_notification(1, 1)])
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 1, 0)
     )
@@ -180,6 +176,7 @@ async def test_room_switch(mock_gateway):
     assert not off_device.is_on
     await off_device.async_turn_on()
     await mock_gateway.check_updates([on_device, off_device, room_device], True)
+    await mock_gateway.check_notifications([preset_notification(1, 4)])
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 4, 0)
     )
@@ -215,16 +212,12 @@ async def test_trigger_switch(mock_gateway):
         DynetPacket.select_area_preset_packet(1, 1, 0)
     )
     await mock_gateway.check_single_update(trigger_device)
+    await mock_gateway.check_notifications([preset_notification(1, 1)])
     assert trigger_device.is_on
     packet_to_send = DynetPacket.report_area_preset_packet(1, 4)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_single_update(trigger_device)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 4)]
     )
     assert not trigger_device.is_on

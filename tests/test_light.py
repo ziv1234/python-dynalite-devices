@@ -2,8 +2,9 @@
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
-from dynalite_devices_lib.dynalite_devices import DynaliteNotification
 from dynalite_devices_lib.dynet import DynetPacket
+
+from .common import packet_notification
 
 
 @pytest.mark.asyncio
@@ -59,12 +60,7 @@ async def test_light(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_single_update(device)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert device.brightness == 255
     assert device.is_on
@@ -73,12 +69,7 @@ async def test_light(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_single_update(device)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert device.brightness == 51
     assert device.is_on
@@ -87,12 +78,7 @@ async def test_light(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_single_update(device)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert device.brightness == 0
     assert not device.is_on
@@ -134,12 +120,7 @@ async def test_light_to_preset(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_single_update(device)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert device.brightness == 51
     assert device.is_on
@@ -148,12 +129,7 @@ async def test_light_to_preset(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_single_update(device)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert device.brightness == 255
     assert device.is_on
@@ -162,12 +138,7 @@ async def test_light_to_preset(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_single_update(device)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert device.brightness == 0
     assert not device.is_on

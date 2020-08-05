@@ -3,8 +3,9 @@
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
-from dynalite_devices_lib.dynalite_devices import DynaliteNotification
 from dynalite_devices_lib.dynet import DynetPacket
+
+from .common import packet_notification, preset_notification
 
 
 @pytest.mark.asyncio
@@ -50,12 +51,7 @@ async def test_dynalite_devices_active(mock_gateway, active):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_single_update(device_pres)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 1)]
     )
     if active is True:
         await mock_gateway.check_writes(
@@ -102,12 +98,7 @@ async def test_dynalite_devices_auto_discover_on(mock_gateway):
     packet_to_send = DynetPacket.report_area_preset_packet(1, 1)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 1)]
     )
     func.assert_called_once()
     devices = func.mock_calls[0][1][0]
@@ -118,12 +109,7 @@ async def test_dynalite_devices_auto_discover_on(mock_gateway):
     packet_to_send = DynetPacket.set_channel_level_packet(2, 3, 0, 0)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     func.assert_called_once()
     devices = func.mock_calls[0][1][0]
@@ -148,23 +134,13 @@ async def test_dynalite_devices_auto_discover_off(mock_gateway):
     packet_to_send = DynetPacket.report_area_preset_packet(1, 1)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 1)]
     )
     func.assert_not_called()
     packet_to_send = DynetPacket.set_channel_level_packet(2, 3, 0, 0)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     func.assert_not_called()
 
@@ -188,23 +164,13 @@ async def test_dynalite_devices_auto_discover_template(mock_gateway):
     packet_to_send = DynetPacket.report_area_preset_packet(1, 2)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 2)]
     )
     func.assert_not_called()
     packet_to_send = DynetPacket.set_channel_level_packet(2, 3, 0, 0)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     func.assert_not_called()
 
@@ -325,4 +291,5 @@ async def test_dynalite_devices_default_fade(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 1, 0.5)
     )
+    await mock_gateway.check_notifications([preset_notification(1, 1)])
     await mock_gateway.check_single_update(preset_device)

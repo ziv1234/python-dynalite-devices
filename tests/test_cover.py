@@ -5,8 +5,9 @@ import asyncio
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
-from dynalite_devices_lib.dynalite_devices import DynaliteNotification
 from dynalite_devices_lib.dynet import DynetPacket
+
+from .common import packet_notification, preset_notification
 
 
 @pytest.mark.asyncio
@@ -60,12 +61,7 @@ async def test_cover_no_tilt(mock_gateway):
         [open_device, close_device, stop_device, cover_device], True
     )
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 2)]
     )
     # It is closed. Let's open
     assert cover_device.is_closed
@@ -76,6 +72,7 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 1, 0)
     )
+    await mock_gateway.check_notifications([preset_notification(1, 1)])
     assert open_device.is_on
     assert not close_device.is_on
     assert not stop_device.is_on
@@ -98,6 +95,7 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 2, 0)
     )
+    await mock_gateway.check_notifications([preset_notification(1, 2)])
     assert close_device.is_on
     assert not open_device.is_on
     assert not stop_device.is_on
@@ -113,6 +111,7 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 3, 0)
     )
+    await mock_gateway.check_notifications([preset_notification(1, 3)])
     assert stop_device.is_on
     assert not open_device.is_on
     assert not close_device.is_on
@@ -129,6 +128,7 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 2, 0)
     )
+    await mock_gateway.check_notifications([preset_notification(1, 2)])
     await asyncio.sleep(0.4)
     await mock_gateway.check_updates([cover_device], True)
     assert cover_device.is_closed
@@ -137,6 +137,13 @@ async def test_cover_no_tilt(mock_gateway):
     await cover_device.async_set_cover_position(position=50)
     await mock_gateway.check_updates(
         [open_device, close_device, stop_device, cover_device], True
+    )
+    await mock_gateway.check_notifications(
+        [
+            preset_notification(1, 1),
+            preset_notification(1, 3),
+            preset_notification(1, 3),
+        ]
     )
     assert (
         not cover_device.is_closed
@@ -148,6 +155,13 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.check_updates(
         [open_device, close_device, stop_device, cover_device], True
     )
+    await mock_gateway.check_notifications(
+        [
+            preset_notification(1, 2),
+            preset_notification(1, 3),
+            preset_notification(1, 3),
+        ]
+    )
     assert (
         not cover_device.is_closed
         and not cover_device.is_opening
@@ -158,6 +172,7 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.check_updates(
         [open_device, close_device, stop_device, cover_device], True
     )
+    await mock_gateway.check_notifications([preset_notification(1, 1)])
     assert cover_device.is_opening
     mock_gateway.reset()
     await cover_device.async_set_cover_position(
@@ -166,6 +181,7 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.check_updates(
         [open_device, close_device, stop_device, cover_device], True
     )
+    await mock_gateway.check_notifications([preset_notification(1, 3)])
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 3, 0)
     )
@@ -181,12 +197,7 @@ async def test_cover_no_tilt(mock_gateway):
         [open_device, close_device, stop_device, cover_device], True
     )
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 1)]
     )
     assert cover_device.is_opening
     packet_to_send = DynetPacket.report_area_preset_packet(1, 2)
@@ -195,12 +206,7 @@ async def test_cover_no_tilt(mock_gateway):
         [open_device, close_device, stop_device, cover_device], True
     )
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 2)]
     )
     assert cover_device.is_closing
     packet_to_send = DynetPacket.report_area_preset_packet(1, 3)
@@ -209,12 +215,7 @@ async def test_cover_no_tilt(mock_gateway):
         [open_device, close_device, stop_device, cover_device], True
     )
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 3)]
     )
     assert not cover_device.is_closing and not cover_device.is_opening
     packet_to_send = DynetPacket.report_area_preset_packet(1, 1)
@@ -223,12 +224,7 @@ async def test_cover_no_tilt(mock_gateway):
         [open_device, close_device, stop_device, cover_device], True
     )
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 1)]
     )
     await asyncio.sleep(0.3)
     await mock_gateway.check_updates([cover_device], True)
@@ -236,12 +232,7 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([cover_device, channel_device], True)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert cover_device.is_closing
     await asyncio.sleep(0.01)
@@ -250,24 +241,14 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([cover_device, channel_device], True)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert cover_device.is_opening
     packet_to_send = DynetPacket.stop_channel_fade_packet(1, 4)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([cover_device, channel_device], True)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert not cover_device.is_opening
     assert not cover_device.is_closing
@@ -276,36 +257,21 @@ async def test_cover_no_tilt(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([cover_device, channel_device], True)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     await asyncio.sleep(0.1)
     packet_to_send = DynetPacket.report_channel_level_packet(1, 4, 1, 0)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([cover_device, channel_device], True)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert cover_device.is_opening
     packet_to_send = DynetPacket.stop_channel_fade_packet(1, 256)
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([cover_device, channel_device], True)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg)]
     )
     assert not cover_device.is_opening
     assert not cover_device.is_closing
@@ -344,12 +310,7 @@ async def test_cover_with_tilt(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([cover_device], True)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 2)]
     )
     # It is closed. Let's open
     assert cover_device.is_closed
@@ -359,6 +320,7 @@ async def test_cover_with_tilt(mock_gateway):
         DynetPacket.select_area_preset_packet(1, 1, 0)
     )
     await mock_gateway.check_updates([cover_device], True)
+    await mock_gateway.check_notifications([preset_notification(1, 1)])
     await asyncio.sleep(0.125)
     await mock_gateway.check_updates([cover_device], True)
     assert cover_device.is_opening
@@ -369,7 +331,15 @@ async def test_cover_with_tilt(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 3, 0)
     )
+    await mock_gateway.check_notifications([preset_notification(1, 3)])
     await cover_device.async_open_cover_tilt()
+    await mock_gateway.check_notifications(
+        [
+            preset_notification(1, 1),
+            preset_notification(1, 3),
+            preset_notification(1, 3),
+        ]
+    )
     await mock_gateway.check_updates([cover_device], True)
     assert cover_device.current_cover_tilt_position == 100
     assert 30 < cover_device.current_cover_position < 70
@@ -389,6 +359,7 @@ async def test_cover_with_tilt(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 2, 0)
     )
+    await mock_gateway.check_notifications([preset_notification(1, 2)])
     await asyncio.sleep(0.125)
     await mock_gateway.check_updates([cover_device], True)
     assert cover_device.is_closing
@@ -399,6 +370,7 @@ async def test_cover_with_tilt(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 3, 0)
     )
+    await mock_gateway.check_notifications([preset_notification(1, 3)])
     assert 30 < cover_device.current_cover_tilt_position < 70
     assert (
         not cover_device.is_closed
@@ -411,6 +383,7 @@ async def test_cover_with_tilt(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 2, 0)
     )
+    await mock_gateway.check_notifications([preset_notification(1, 2)])
     await asyncio.sleep(0.6)
     await mock_gateway.check_updates([cover_device], True)
     assert cover_device.is_closed
@@ -421,6 +394,13 @@ async def test_cover_with_tilt(mock_gateway):
     await mock_gateway.check_writes([])
     # Now open it half-way
     await cover_device.async_set_cover_tilt_position(tilt_position=50)
+    await mock_gateway.check_notifications(
+        [
+            preset_notification(1, 1),
+            preset_notification(1, 3),
+            preset_notification(1, 3),
+        ]
+    )
     await mock_gateway.check_updates([cover_device], True)
     await asyncio.sleep(0.3)
     await mock_gateway.check_updates([])
@@ -460,12 +440,7 @@ async def test_cover_no_channel(mock_gateway):
     await mock_gateway.receive(packet_to_send)
     await mock_gateway.check_updates([cover_device], True)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
-            )
-        ]
+        [packet_notification(packet_to_send.raw_msg), preset_notification(1, 2)]
     )
     # It is closed. Let's open
     assert cover_device.is_closed
@@ -474,6 +449,7 @@ async def test_cover_no_channel(mock_gateway):
         DynetPacket.select_area_preset_packet(1, 1, 0)
     )
     await mock_gateway.check_updates([cover_device], True)
+    await mock_gateway.check_notifications([preset_notification(1, 1)])
     await asyncio.sleep(0.25)
     await mock_gateway.check_updates([cover_device], True)
     assert cover_device.is_opening

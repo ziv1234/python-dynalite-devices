@@ -6,9 +6,10 @@ from asynctest import patch
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
-from dynalite_devices_lib.dynalite_devices import DynaliteNotification
 from dynalite_devices_lib.dynet import DynetPacket
 from dynalite_devices_lib.opcodes import SyncType
+
+from .common import packet_notification
 
 
 @pytest.mark.asyncio
@@ -128,14 +129,7 @@ async def test_dynalite_split_message(mock_gateway):
     await mock_gateway.receive_message(msg1)
     await mock_gateway.receive_message(msg2)
     await mock_gateway.check_single_update(device)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert device.is_on
 
 
@@ -156,14 +150,7 @@ async def test_dynalite_shift_message(mock_gateway):
     message = bytearray([3, 7, 12]) + packet.msg
     await mock_gateway.receive_message(message)
     await mock_gateway.check_single_update(device)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert device.is_on
 
 
@@ -186,25 +173,11 @@ async def test_dynalite_debug_message(mock_gateway):
     int_message = [SyncType.DEBUG_MSG.value, 64, 65] + packet.raw_msg
     message = bytearray(int_message)
     await mock_gateway.receive_message(message)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: int_message[:8]},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(int_message[:8])])
     assert not device.is_on
     await mock_gateway.receive(packet)
     await mock_gateway.check_single_update(device)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert device.is_on
 
 
@@ -227,25 +200,11 @@ async def test_dynalite_device_message(mock_gateway):
     int_message = [SyncType.DEVICE.value, 65, 66] + packet.raw_msg
     message = bytearray(int_message)
     await mock_gateway.receive_message(message)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: int_message[:8]},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(int_message[:8])])
     assert not device.is_on
     await mock_gateway.receive(packet)
     await mock_gateway.check_single_update(device)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert device.is_on
 
 
@@ -270,14 +229,7 @@ async def test_dynalite_error_message(mock_gateway):
     packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     await mock_gateway.receive(packet)
     await mock_gateway.check_single_update(device)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert device.is_on
 
 
@@ -296,26 +248,12 @@ async def test_dynalite_unhandled_message(mock_gateway):
     assert not device.is_on
     packet = DynetPacket(area=1, command=45, data=[0, 0, 0])
     await mock_gateway.receive(packet)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert not device.is_on
     packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     await mock_gateway.receive(packet)
     await mock_gateway.check_single_update(device)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert device.is_on
 
 
@@ -334,26 +272,12 @@ async def test_dynalite_unknown_message(mock_gateway):
     assert not device.is_on
     packet = DynetPacket(area=1, command=200, data=[0, 0, 0])
     await mock_gateway.receive(packet)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert not device.is_on
     packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     await mock_gateway.receive(packet)
     await mock_gateway.check_single_update(device)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert device.is_on
 
 
@@ -377,16 +301,7 @@ async def test_dynalite_two_messages(mock_gateway):
     await mock_gateway.receive_message(packet1.msg + packet2.msg)
     await mock_gateway.check_updates(devices)
     await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet1.raw_msg},
-            ),
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet2.raw_msg},
-            ),
-        ]
+        [packet_notification(packet1.raw_msg), packet_notification(packet2.raw_msg)]
     )
     for device in devices:
         assert device.is_on

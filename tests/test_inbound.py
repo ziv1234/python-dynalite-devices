@@ -3,9 +3,10 @@
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
-from dynalite_devices_lib.dynalite_devices import DynaliteNotification
 from dynalite_devices_lib.dynet import DynetPacket
 from dynalite_devices_lib.opcodes import OpcodeType
+
+from .common import packet_notification, preset_notification
 
 
 def preset_select_func(area, preset):
@@ -63,14 +64,7 @@ async def test_selections(mock_gateway, conf, packet_func):
     for i in range(1, 9):
         packet = packet_func(2, i)
         await mock_gateway.receive(packet)
-        await mock_gateway.check_notifications(
-            [
-                DynaliteNotification(
-                    dyn_const.NOTIFICATION_PACKET,
-                    {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-                )
-            ]
-        )
+        exp_notifications = [packet_notification(packet.raw_msg)]
         if conf == dyn_const.CONF_CHANNEL:
             await mock_gateway.check_single_update(devices[i - 1])
             assert devices[i - 1].is_on
@@ -78,6 +72,8 @@ async def test_selections(mock_gateway, conf, packet_func):
             await mock_gateway.check_updates(devices)
             for j in range(1, 9):
                 assert devices[j - 1].is_on == (i == j)
+            exp_notifications.append(preset_notification(2, i))
+        await mock_gateway.check_notifications(exp_notifications)
 
 
 @pytest.mark.asyncio
@@ -96,12 +92,5 @@ async def test_inbound_request_channel_level(mock_gateway):
     await mock_gateway.check_single_update(None)
     packet = DynetPacket.request_channel_level_packet(3, 5)
     await mock_gateway.receive(packet)
-    await mock_gateway.check_notifications(
-        [
-            DynaliteNotification(
-                dyn_const.NOTIFICATION_PACKET,
-                {dyn_const.NOTIFICATION_PACKET: packet.raw_msg},
-            )
-        ]
-    )
+    await mock_gateway.check_notifications([packet_notification(packet.raw_msg)])
     assert not device.is_on

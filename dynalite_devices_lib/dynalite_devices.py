@@ -44,6 +44,7 @@ from .const import (
     EVENT_PRESET,
     LOGGER,
     NOTIFICATION_PACKET,
+    NOTIFICATION_PRESET,
 )
 from .cover import DynaliteTimeCoverDevice, DynaliteTimeCoverWithTiltDevice
 from .dynalite import Dynalite
@@ -249,7 +250,17 @@ class DynaliteDevices:
             self.update_device()
         elif event.event_type == EVENT_PRESET:
             LOGGER.debug("Received PRESET message")
+            assert event.data
             self.handle_preset_selection(event)
+            self.send_notification(
+                DynaliteNotification(
+                    NOTIFICATION_PRESET,
+                    {
+                        CONF_AREA: event.data[CONF_AREA],
+                        CONF_PRESET: event.data[CONF_PRESET],
+                    },
+                )
+            )
         elif event.event_type == EVENT_CHANNEL:
             LOGGER.debug("Received CHANNEL message")
             self.handle_channel_change(event)
