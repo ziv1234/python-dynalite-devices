@@ -146,11 +146,23 @@ class Dynalite:
                 if first_byte == SyncType.DEBUG_MSG.value:
                     bytemsg = "".join(chr(c) for c in self._in_buffer[1:7])
                     LOGGER.debug("Dynet DEBUG message %s", bytemsg)
+                    self.broadcast(
+                        DynetEvent(
+                            event_type=EVENT_PACKET,
+                            data={EVENT_PACKET: self._in_buffer[:8]},
+                        )
+                    )
                     self._in_buffer = self._in_buffer[8:]
                     continue
                 if first_byte == SyncType.DEVICE.value:
                     LOGGER.debug(
                         "Not handling Dynet DEVICE message %s", self._in_buffer[:8]
+                    )
+                    self.broadcast(
+                        DynetEvent(
+                            event_type=EVENT_PACKET,
+                            data={EVENT_PACKET: self._in_buffer[:8]},
+                        )
                     )
                     self._in_buffer = self._in_buffer[8:]
                     continue
@@ -167,6 +179,11 @@ class Dynalite:
                 )
                 del self._in_buffer[0]
                 continue
+            self.broadcast(
+                DynetEvent(
+                    event_type=EVENT_PACKET, data={EVENT_PACKET: self._in_buffer[:8]}
+                )
+            )
             self._in_buffer = self._in_buffer[8:]
         return packet
 
@@ -197,9 +214,6 @@ class Dynalite:
         packet = self.next_packet()
         if not packet:
             return
-        self.broadcast(
-            DynetEvent(event_type=EVENT_PACKET, data={EVENT_PACKET: packet.raw_msg})
-        )
         LOGGER.debug("Have packet: %s", packet)
         event = self.event_from_packet(packet)
         if event:

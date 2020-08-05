@@ -183,8 +183,17 @@ async def test_dynalite_debug_message(mock_gateway):
     # putting a debug message + a device-on message half-way.
     # will verify that it will first read the debug message and then ignore other
     packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
-    message = bytearray([SyncType.DEBUG_MSG.value, 7, 12]) + packet.msg
+    int_message = [SyncType.DEBUG_MSG.value, 64, 65] + packet.raw_msg
+    message = bytearray(int_message)
     await mock_gateway.receive_message(message)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: int_message[:8]},
+            )
+        ]
+    )
     assert not device.is_on
     await mock_gateway.receive(packet)
     await mock_gateway.check_single_update(device)
@@ -215,8 +224,17 @@ async def test_dynalite_device_message(mock_gateway):
     # putting a device message + a device-on message half-way.
     # will verify that it will first read the device message and then ignore other
     packet = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
-    message = bytearray([SyncType.DEVICE.value, 7, 12]) + packet.msg
+    int_message = [SyncType.DEVICE.value, 65, 66] + packet.raw_msg
+    message = bytearray(int_message)
     await mock_gateway.receive_message(message)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: int_message[:8]},
+            )
+        ]
+    )
     assert not device.is_on
     await mock_gateway.receive(packet)
     await mock_gateway.check_single_update(device)
