@@ -20,17 +20,20 @@ class MockGateway:
         self.in_buffer = bytearray()
         self.new_dev_func = Mock()
         self.update_dev_func = Mock()
+        self.notification_func = Mock()
         self.exceptions = []
         if message_delay_zero:
             with patch("dynalite_devices_lib.dynalite.MESSAGE_DELAY", 0):
                 self.dyn_dev = DynaliteDevices(
                     new_device_func=self.new_dev_func,
                     update_device_func=self.update_dev_func,
+                    notification_func=self.notification_func,
                 )
         else:
             self.dyn_dev = DynaliteDevices(
                 new_device_func=self.new_dev_func,
                 update_device_func=self.update_dev_func,
+                notification_func=self.notification_func,
             )
 
     async def run_server(self):
@@ -80,6 +83,34 @@ class MockGateway:
     async def check_single_write(self, packet):
         """Check that there was only a single packet written."""
         await self.check_writes([packet])
+
+    async def check_updates(self, updates, unique=False):
+        """Check that the correct updates were sent."""
+        await asyncio.sleep(0.01)
+        received_updates = [call[1][0] for call in self.update_dev_func.mock_calls]
+        if unique:
+            received_updates = set(received_updates)
+        dyn_const.LOGGER.error("updates = %s", received_updates)
+        assert len(received_updates) == len(updates)
+        for update in updates:
+            assert update in received_updates
+        self.update_dev_func.reset_mock()
+
+    async def check_single_update(self, update):
+        """Check that there was only a single packet written."""
+        await self.check_updates([update])
+
+    async def check_notifications(self, notifications):
+        """Check that the correct notifications were sent."""
+        await asyncio.sleep(0.01)
+        received_notifications = [
+            call[1][0] for call in self.notification_func.mock_calls
+        ]
+        dyn_const.LOGGER.error("notifications = %s", received_notifications)
+        assert len(received_notifications) == len(notifications)
+        for notification in notifications:
+            assert notification in received_notifications
+        self.notification_func.reset_mock()
 
     async def receive_message(self, message):
         """Fake a received message."""
@@ -131,6 +162,9 @@ class MockGateway:
         asyncio.get_event_loop().run_until_complete(self.async_fin())
         for ex in self.exceptions:
             raise ex
+        # verify that we checked all the updates and notifications
+        self.notification_func.assert_not_called()
+        self.update_dev_func.assert_not_called()
 
 
 @pytest.fixture()

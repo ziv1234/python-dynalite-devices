@@ -2,6 +2,7 @@
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
+from dynalite_devices_lib.dynalite_devices import DynaliteNotification
 from dynalite_devices_lib.dynet import DynetPacket
 
 
@@ -28,6 +29,7 @@ async def test_light(mock_gateway):
         }
     )
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     assert device.category == "light"
     assert device.name == f"{name} {channel_name}"
     assert device.unique_id == "dynalite_area_1_channel_1"
@@ -38,25 +40,60 @@ async def test_light(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     )
+    await mock_gateway.check_single_update(device)
     assert device.brightness == 255
     await device.async_turn_on(brightness=51)
     await mock_gateway.check_single_write(
         DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5)
     )
+    await mock_gateway.check_single_update(device)
     assert device.brightness == 51
     await device.async_turn_off()
     await mock_gateway.check_single_write(
         DynetPacket.set_channel_level_packet(1, 1, 0, 0.5)
     )
+    await mock_gateway.check_single_update(device)
     assert device.brightness == 0
     # Now send commands
-    await mock_gateway.receive(DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5))
+    packet_to_send = DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_single_update(device)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     assert device.brightness == 255
     assert device.is_on
-    await mock_gateway.receive(DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5))
+
+    packet_to_send = DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_single_update(device)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     assert device.brightness == 51
     assert device.is_on
-    await mock_gateway.receive(DynetPacket.report_channel_level_packet(1, 1, 0, 0))
+
+    packet_to_send = DynetPacket.report_channel_level_packet(1, 1, 0, 0)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_single_update(device)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     assert device.brightness == 0
     assert not device.is_on
 
@@ -85,6 +122,7 @@ async def test_light_to_preset(mock_gateway):
         4,
     )
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     assert device.category == "light"
     assert device.name == f"{name} {channel_name}"
     assert device.unique_id == "dynalite_area_1_channel_1"
@@ -92,20 +130,44 @@ async def test_light_to_preset(mock_gateway):
     assert device.area_name == name
     assert device.get_master_area == name
     # Now send commands
-    await mock_gateway.receive(
-        DynetPacket.fade_area_channel_preset_packet(1, 1, 2, 0.0)
+    packet_to_send = DynetPacket.fade_area_channel_preset_packet(1, 1, 2, 0.0)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_single_update(device)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
     )
     assert device.brightness == 51
     assert device.is_on
     # check default preset on
-    await mock_gateway.receive(
-        DynetPacket.fade_area_channel_preset_packet(1, 1, 1, 0.0)
+    packet_to_send = DynetPacket.fade_area_channel_preset_packet(1, 1, 1, 0.0)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_single_update(device)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
     )
     assert device.brightness == 255
     assert device.is_on
     # check default preset off
-    await mock_gateway.receive(
-        DynetPacket.fade_area_channel_preset_packet(1, 1, 4, 0.0)
+    packet_to_send = DynetPacket.fade_area_channel_preset_packet(1, 1, 4, 0.0)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_single_update(device)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
     )
     assert device.brightness == 0
     assert not device.is_on

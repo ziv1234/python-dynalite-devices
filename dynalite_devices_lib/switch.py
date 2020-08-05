@@ -16,10 +16,12 @@ if TYPE_CHECKING:  # pragma: no cover
 class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Switch."""
 
-    def __init__(self, area: int, channel: int, bridge: "DynaliteDevices") -> None:
+    def __init__(
+        self, area: int, channel: int, bridge: "DynaliteDevices", hidden: bool
+    ) -> None:
         """Initialize the switch."""
         self._level = 0.0
-        super().__init__(area, channel, bridge)
+        super().__init__(area, channel, bridge, hidden)
 
     @property
     def category(self) -> str:
@@ -52,11 +54,13 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
 class DynalitePresetSwitchDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
-    def __init__(self, area: int, preset: int, bridge: "DynaliteDevices") -> None:
+    def __init__(
+        self, area: int, preset: int, bridge: "DynaliteDevices", hidden: bool
+    ) -> None:
         """Initialize the switch."""
         self._preset = preset
         self._level = 0
-        super().__init__(area, bridge)
+        super().__init__(area, bridge, hidden)
 
     @property
     def available(self) -> bool:
@@ -105,9 +109,9 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
 class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
 
-    def __init__(self, area: int, bridge: "DynaliteDevices") -> None:
+    def __init__(self, area: int, bridge: "DynaliteDevices", hidden: bool) -> None:
         """Initialize the switch."""
-        super().__init__(2, area, bridge)
+        super().__init__(2, area, bridge, hidden)
 
     @property
     def available(self) -> bool:

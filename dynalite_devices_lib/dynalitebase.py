@@ -7,14 +7,15 @@ if TYPE_CHECKING:  # pragma: no cover
     from .dynalite_devices import DynaliteDevices
 
 
-class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the entity (light, switch, device, etc.)
+class DynaliteBaseDevice:
     """Base class for Dynalite devices."""
 
-    def __init__(self, area: int, bridge: "DynaliteDevices") -> None:
+    def __init__(self, area: int, bridge: "DynaliteDevices", hidden: bool) -> None:
         """Initialize the device."""
         self._area = area
         self._bridge = bridge
         self._listeners: List[Callable[[DynaliteBaseDevice, bool], None]] = []
+        self._hidden = hidden
 
     @property
     def area_name(self) -> str:
@@ -25,6 +26,11 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
     def get_master_area(self) -> str:
         """Get the master area when combining entities from different Dynet areas to the same area."""
         return self._bridge.get_master_area(self._area)
+
+    @property
+    def hidden(self) -> bool:
+        """Get whether the device should be hidden from the calling platform."""
+        return self._hidden
 
     def add_listener(
         self, listener: Callable[["DynaliteBaseDevice", bool], None]
@@ -41,10 +47,12 @@ class DynaliteBaseDevice:  # Deriving from Object so it doesn't override the ent
 class DynaliteChannelBaseDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant device."""
 
-    def __init__(self, area: int, channel: int, bridge: "DynaliteDevices") -> None:
+    def __init__(
+        self, area: int, channel: int, bridge: "DynaliteDevices", hidden: bool
+    ) -> None:
         """Initialize the device."""
         self._channel = channel
-        super().__init__(area, bridge)
+        super().__init__(area, bridge, hidden)
 
     @property
     def available(self) -> bool:
@@ -69,11 +77,13 @@ class DynaliteChannelBaseDevice(DynaliteBaseDevice):
 class DynaliteMultiDevice(DynaliteBaseDevice):
     """Representation of two Dynalite Presets as an on/off switch."""
 
-    def __init__(self, num_devices: int, area: int, bridge: "DynaliteDevices") -> None:
+    def __init__(
+        self, num_devices: int, area: int, bridge: "DynaliteDevices", hidden: bool
+    ) -> None:
         """Initialize the device."""
         self._devices: Dict[int, DynaliteBaseDevice] = {}
         self._num_devices = num_devices
-        super().__init__(area, bridge)
+        super().__init__(area, bridge, hidden)
 
     @property
     def name(self) -> str:

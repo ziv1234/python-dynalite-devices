@@ -23,6 +23,7 @@ from .const import (
     EVENT_CHANNEL,
     EVENT_CONNECTED,
     EVENT_DISCONNECTED,
+    EVENT_PACKET,
     EVENT_PRESET,
     LOGGER,
     MESSAGE_DELAY,
@@ -196,6 +197,9 @@ class Dynalite:
         packet = self.next_packet()
         if not packet:
             return
+        self.broadcast(
+            DynetEvent(event_type=EVENT_PACKET, data={EVENT_PACKET: packet.raw_msg})
+        )
         LOGGER.debug("Have packet: %s", packet)
         event = self.event_from_packet(packet)
         if event:

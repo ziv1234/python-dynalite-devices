@@ -76,6 +76,11 @@ class DynetPacket:
         return None
 
     @property
+    def raw_msg(self) -> List[int]:
+        """Return the raw message as a list of integers."""
+        return self._msg
+
+    @property
     def msg(self) -> bytearray:
         """Get the byte array for the message to send."""
         return bytearray(self._msg)

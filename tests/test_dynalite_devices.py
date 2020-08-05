@@ -3,6 +3,7 @@
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
+from dynalite_devices_lib.dynalite_devices import DynaliteNotification
 from dynalite_devices_lib.dynet import DynetPacket
 
 
@@ -17,6 +18,7 @@ async def test_empty_dynalite_devices(mock_gateway):
         0,
     )
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     await mock_gateway.check_writes([])
 
 
@@ -24,7 +26,7 @@ async def test_empty_dynalite_devices(mock_gateway):
 @pytest.mark.parametrize("active", [False, dyn_const.ACTIVE_INIT, True])
 async def test_dynalite_devices_active(mock_gateway, active):
     """Test with active set to ON."""
-    mock_gateway.configure_dyn_dev(
+    [device_chan1, device_chan2, device_pres] = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: active,
             dyn_const.CONF_AREA: {"1": {dyn_const.CONF_CHANNEL: {"1": {}, "2": {}}}},
@@ -33,6 +35,7 @@ async def test_dynalite_devices_active(mock_gateway, active):
         3,
     )
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     if active is not False:
         await mock_gateway.check_writes(
             [
@@ -43,7 +46,17 @@ async def test_dynalite_devices_active(mock_gateway, active):
         )
     else:
         await mock_gateway.check_writes([])
-    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
+    packet_to_send = DynetPacket.report_area_preset_packet(1, 1)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_single_update(device_pres)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     if active is True:
         await mock_gateway.check_writes(
             [
@@ -69,6 +82,7 @@ async def test_dynalite_devices_reconfig(mock_gateway):
     }
     mock_gateway.configure_dyn_dev(config, 5)
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     mock_gateway.configure_dyn_dev(config, 0)
 
 
@@ -82,19 +96,40 @@ async def test_dynalite_devices_auto_discover_on(mock_gateway):
     }
     mock_gateway.configure_dyn_dev(config, 0)
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     func = mock_gateway.new_dev_func
     func.reset_mock()
-    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
+    packet_to_send = DynetPacket.report_area_preset_packet(1, 1)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     func.assert_called_once()
     devices = func.mock_calls[0][1][0]
     assert len(devices) == 1
     assert devices[0].unique_id == "dynalite_area_1_preset_1"
+    await mock_gateway.check_single_update(devices[0])
     func.reset_mock()
-    await mock_gateway.receive(DynetPacket.set_channel_level_packet(2, 3, 0, 0))
+    packet_to_send = DynetPacket.set_channel_level_packet(2, 3, 0, 0)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     func.assert_called_once()
     devices = func.mock_calls[0][1][0]
     assert len(devices) == 1
     assert devices[0].unique_id == "dynalite_area_2_channel_3"
+    await mock_gateway.check_single_update(devices[0])
 
 
 @pytest.mark.asyncio
@@ -107,11 +142,30 @@ async def test_dynalite_devices_auto_discover_off(mock_gateway):
     }
     mock_gateway.configure_dyn_dev(config, 0)
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     func = mock_gateway.new_dev_func
     func.reset_mock()
-    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 1))
+    packet_to_send = DynetPacket.report_area_preset_packet(1, 1)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     func.assert_not_called()
-    await mock_gateway.receive(DynetPacket.set_channel_level_packet(2, 3, 0, 0))
+    packet_to_send = DynetPacket.set_channel_level_packet(2, 3, 0, 0)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     func.assert_not_called()
 
 
@@ -128,11 +182,30 @@ async def test_dynalite_devices_auto_discover_template(mock_gateway):
     }
     mock_gateway.configure_dyn_dev(config, 2)
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     func = mock_gateway.new_dev_func
     func.reset_mock()
-    await mock_gateway.receive(DynetPacket.report_area_preset_packet(1, 2))
+    packet_to_send = DynetPacket.report_area_preset_packet(1, 2)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     func.assert_not_called()
-    await mock_gateway.receive(DynetPacket.set_channel_level_packet(2, 3, 0, 0))
+    packet_to_send = DynetPacket.set_channel_level_packet(2, 3, 0, 0)
+    await mock_gateway.receive(packet_to_send)
+    await mock_gateway.check_notifications(
+        [
+            DynaliteNotification(
+                dyn_const.NOTIFICATION_PACKET,
+                {dyn_const.NOTIFICATION_PACKET: packet_to_send.raw_msg},
+            )
+        ]
+    )
     func.assert_not_called()
 
 
@@ -152,6 +225,7 @@ async def test_dynalite_devices_unknown_channel_type(mock_gateway):
         0,
     )
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     await mock_gateway.check_writes([])
 
 
@@ -210,6 +284,7 @@ async def test_dynalite_devices_reconfig_with_missing(mock_gateway):
         1,
     )
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     assert device.available
     assert device.name == "Area 1 Channel 1"
     assert device.unique_id == "dynalite_area_1_channel_1"
@@ -239,12 +314,15 @@ async def test_dynalite_devices_default_fade(mock_gateway):
         2,
     )
     assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
     await mock_gateway.check_writes([])
     await channel_device.async_turn_on()
     await mock_gateway.check_single_write(
         DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
     )
+    await mock_gateway.check_single_update(channel_device)
     await preset_device.async_turn_on()
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 1, 0.5)
     )
+    await mock_gateway.check_single_update(preset_device)

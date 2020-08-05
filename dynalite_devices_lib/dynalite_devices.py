@@ -40,8 +40,10 @@ from .const import (
     EVENT_CHANNEL,
     EVENT_CONNECTED,
     EVENT_DISCONNECTED,
+    EVENT_PACKET,
     EVENT_PRESET,
     LOGGER,
+    NOTIFICATION_PACKET,
 )
 from .cover import DynaliteTimeCoverDevice, DynaliteTimeCoverWithTiltDevice
 from .dynalite import Dynalite
@@ -55,6 +57,29 @@ from .switch import (
 )
 
 
+class DynaliteNotification:
+    """A notification from the network that is sent to the application."""
+
+    def __init__(self, notification: str, data: Dict[str, Any]):
+        """Create a notification."""
+        self.notification = notification
+        self.data = data
+
+    def __repr__(self):
+        """Print a notification for logs."""
+        return (
+            "DynaliteNotification(notification="
+            + self.notification
+            + ", data="
+            + str(self.data)
+            + ")"
+        )
+
+    def __eq__(self, other):
+        """Compare two notification, mostly for debug."""
+        return self.notification == other.notification and self.data == other.data
+
+
 class DynaliteDevices:
     """Manages a single Dynalite bridge."""
 
@@ -62,6 +87,7 @@ class DynaliteDevices:
         self,
         new_device_func: Callable[[List[DynaliteBaseDevice]], None],
         update_device_func: Callable[[Optional[DynaliteBaseDevice]], None],
+        notification_func: Callable[[DynaliteNotification], None],
     ) -> None:
         """Initialize the system."""
         self._host = ""
@@ -74,6 +100,7 @@ class DynaliteDevices:
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._new_device_func = new_device_func
         self._update_device_func = update_device_func
+        self._notification_func = notification_func
         self._configured = False
         self.connected = False  # public
         self._added_presets: Dict[int, Any] = {}
@@ -138,7 +165,7 @@ class DynaliteDevices:
             if area_config.get(CONF_TEMPLATE, "") == CONF_ROOM:
                 if area in self._added_room_switches:
                     continue
-                new_device = DynaliteDualPresetSwitchDevice(area, self)
+                new_device = DynaliteDualPresetSwitchDevice(area, self, False)
                 self._added_room_switches[area] = new_device
                 new_device.set_device(
                     1, self._added_presets[area][area_config[CONF_ROOM_ON]]
@@ -146,7 +173,7 @@ class DynaliteDevices:
                 new_device.set_device(
                     2, self._added_presets[area][area_config[CONF_ROOM_OFF]]
                 )
-                self.register_new_device(new_device, False)
+                self.register_new_device(new_device)
 
     def register_time_covers(self) -> None:
         """Register the time covers from three presets and a channel each."""
@@ -155,10 +182,12 @@ class DynaliteDevices:
                 if area in self._added_time_covers:
                     continue
                 if area_config[CONF_TILT_TIME] == 0:
-                    new_device = DynaliteTimeCoverDevice(area, self, self._poll_timer)
+                    new_device = DynaliteTimeCoverDevice(
+                        area, self, self._poll_timer, False
+                    )
                 else:
                     new_device = DynaliteTimeCoverWithTiltDevice(
-                        area, self, self._poll_timer
+                        area, self, self._poll_timer, False
                     )
                 self._added_time_covers[area] = new_device
                 new_device.set_device(
@@ -175,14 +204,14 @@ class DynaliteDevices:
                         area_config[CONF_CHANNEL_COVER]
                     ]
                 else:
-                    channel_device = DynaliteBaseDevice(area, self)
+                    channel_device = DynaliteBaseDevice(area, self, True)
                 new_device.set_device(4, channel_device)
-                self.register_new_device(new_device, False)
+                self.register_new_device(new_device)
 
-    def register_new_device(self, device: DynaliteBaseDevice, hidden: bool) -> None:
+    def register_new_device(self, device: DynaliteBaseDevice) -> None:
         """Register a new device and group all the ones prior to CONFIGURED event together."""
         # after initial configuration, every new device gets sent on its own. The initial ones are bunched together
-        if not hidden:
+        if not device.hidden:
             if self._configured:
                 self._new_device_func([device])
             else:  # send all the devices together when configured
@@ -199,7 +228,13 @@ class DynaliteDevices:
 
     def update_device(self, device: Optional[DynaliteBaseDevice] = None) -> None:
         """Update one or more devices."""
+        if device and device.hidden:
+            return
         self._update_device_func(device)
+
+    def send_notification(self, notification: DynaliteNotification) -> None:
+        """Update one or more devices."""
+        self._notification_func(notification)
 
     def handle_event(self, event: DynetEvent) -> None:
         """Handle all events."""
@@ -215,10 +250,18 @@ class DynaliteDevices:
         elif event.event_type == EVENT_PRESET:
             LOGGER.debug("Received PRESET message")
             self.handle_preset_selection(event)
-        else:
-            assert event.event_type == EVENT_CHANNEL
+        elif event.event_type == EVENT_CHANNEL:
             LOGGER.debug("Received CHANNEL message")
             self.handle_channel_change(event)
+        else:
+            assert event.event_type == EVENT_PACKET
+            assert event.data
+            LOGGER.debug("Received PACKET message")
+            self.send_notification(
+                DynaliteNotification(
+                    NOTIFICATION_PACKET, {NOTIFICATION_PACKET: event.data[EVENT_PACKET]}
+                )
+            )
 
     def ensure_area(self, area: int) -> None:
         """Configure a default area if it is not yet in config."""
@@ -248,9 +291,9 @@ class DynaliteDevices:
             if area_config.get(CONF_TEMPLATE, False):
                 area_config[CONF_PRESET][preset][CONF_HIDDEN_ENTITY] = True
         hidden = area_config[CONF_PRESET][preset].get(CONF_HIDDEN_ENTITY, False)
-        new_device = DynalitePresetSwitchDevice(area, preset, self,)
+        new_device = DynalitePresetSwitchDevice(area, preset, self, hidden)
         new_device.set_level(0)
-        self.register_new_device(new_device, hidden)
+        self.register_new_device(new_device)
         if area not in self._added_presets:
             self._added_presets[area] = {}
         self._added_presets[area][preset] = new_device
@@ -301,12 +344,12 @@ class DynaliteDevices:
         hidden = channel_config.get(CONF_HIDDEN_ENTITY, False)
         if channel_type == "light":
             new_device: DynaliteBaseDevice = DynaliteChannelLightDevice(
-                area, channel, self,
+                area, channel, self, hidden
             )
-            self.register_new_device(new_device, hidden)
+            self.register_new_device(new_device)
         elif channel_type == "switch":
-            new_device = DynaliteChannelSwitchDevice(area, channel, self,)
-            self.register_new_device(new_device, hidden)
+            new_device = DynaliteChannelSwitchDevice(area, channel, self, hidden)
+            self.register_new_device(new_device)
         else:
             LOGGER.info("unknown chnanel type %s - ignoring", channel_type)
             return

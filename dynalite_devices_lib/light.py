@@ -12,11 +12,13 @@ if TYPE_CHECKING:  # pragma: no cover
 class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
     """Representation of a Dynalite Channel as a Home Assistant Light."""
 
-    def __init__(self, area: int, channel: int, bridge: "DynaliteDevices") -> None:
+    def __init__(
+        self, area: int, channel: int, bridge: "DynaliteDevices", hidden: bool
+    ) -> None:
         """Initialize the light."""
         self._level = 0.0
         self._direction = "stop"
-        super().__init__(area, channel, bridge)
+        super().__init__(area, channel, bridge, hidden)
 
     @property
     def category(self) -> str:

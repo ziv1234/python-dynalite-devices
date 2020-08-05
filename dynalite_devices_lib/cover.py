@@ -14,13 +14,15 @@ if TYPE_CHECKING:  # pragma: no cover
 class DynaliteTimeCoverDevice(DynaliteMultiDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover."""
 
-    def __init__(self, area: int, bridge: "DynaliteDevices", poll_timer: float) -> None:
+    def __init__(
+        self, area: int, bridge: "DynaliteDevices", poll_timer: float, hidden: bool
+    ) -> None:
         """Initialize the cover."""
         self._current_position = 0.0
         self._initialized = False
         self._direction = "stop"
         self._poll_timer = poll_timer
-        super().__init__(4, area, bridge)
+        super().__init__(4, area, bridge, hidden)
 
     @property
     def available(self) -> bool:
@@ -190,10 +192,12 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
 class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover that uses up and down for tilt."""
 
-    def __init__(self, area: int, bridge: "DynaliteDevices", poll_timer: float) -> None:
+    def __init__(
+        self, area: int, bridge: "DynaliteDevices", poll_timer: float, hidden: bool
+    ) -> None:
         """Initialize the cover."""
         self._current_tilt = 0.0
-        super().__init__(area, bridge, poll_timer)
+        super().__init__(area, bridge, poll_timer, hidden)
 
     @property
     def has_tilt(self) -> bool:
