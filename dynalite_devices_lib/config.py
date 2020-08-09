@@ -72,8 +72,8 @@ class DynaliteConfig:
             self.active = temp_active
         self.poll_timer = config.get(CONF_POLL_TIMER, 1.0)
         self.default_fade = config.get(CONF_DEFAULT, {}).get(CONF_FADE, 0)
-        self.default_query_channel = config.get(CONF_DEFAULT, {}).get(
-            CONF_QUERY_CHANNEL, DEFAULT_QUERY_CHANNEL
+        self.default_query_channel = int(
+            config.get(CONF_DEFAULT, {}).get(CONF_QUERY_CHANNEL, DEFAULT_QUERY_CHANNEL)
         )
         # create the templates
         config_templates = config.get(CONF_TEMPLATE, {})
@@ -158,8 +158,8 @@ class DynaliteConfig:
         result = {
             CONF_NAME: area_config.get(CONF_NAME, f"Area {area}"),
             CONF_FADE: area_config.get(CONF_FADE, default_fade),
-            CONF_QUERY_CHANNEL: area_config.get(
-                CONF_QUERY_CHANNEL, default_query_channel
+            CONF_QUERY_CHANNEL: int(
+                area_config.get(CONF_QUERY_CHANNEL, default_query_channel)
             ),
         }
         for conf in [CONF_TEMPLATE, CONF_AREA_OVERRIDE]:
