@@ -28,6 +28,7 @@ from .const import (
     CONF_NONE,
     CONF_OPEN_PRESET,
     CONF_PRESET,
+    CONF_QUERY_CHANNEL,
     CONF_ROOM,
     CONF_ROOM_OFF,
     CONF_ROOM_ON,
@@ -96,6 +97,7 @@ class DynaliteDevices:
         self.name = None  # public
         self._poll_timer = 0.0
         self._default_fade = 0.0
+        self._default_query_channel = 0
         self._active = ""
         self._auto_discover = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -137,16 +139,19 @@ class DynaliteDevices:
         self._active = configurator.active
         self._poll_timer = configurator.poll_timer
         self._default_fade = configurator.default_fade
+        self._default_query_channel = configurator.default_query_channel
         self._area = configurator.area
         self._default_presets = configurator.default_presets
         # now register the channels and presets and ask for initial status if needed
         for area in self._area:
             if self._active in [ACTIVE_INIT, ACTIVE_ON]:
-                self._dynalite.request_area_preset(area)
+                self.request_area_preset(
+                    area, self._area[area][CONF_QUERY_CHANNEL]
+                )  # XXX
             for channel in self._area[area][CONF_CHANNEL]:
                 self.create_channel_if_new(area, channel)
                 if self._active in [ACTIVE_INIT, ACTIVE_ON]:
-                    self._dynalite.request_channel_level(area, channel)
+                    self.request_channel_level(area, channel)
             for preset in self._area[area][CONF_PRESET]:
                 self.create_preset_if_new(area, preset)
         # register the rooms (switches on presets 1/4)
@@ -280,7 +285,7 @@ class DynaliteDevices:
             LOGGER.debug("adding area %s that is not in config", area)
             # consider adding default presets to new areas (XXX)
             self._area[area] = DynaliteConfig.configure_area(
-                area, {}, self._default_fade, {}, {}
+                area, {}, self._default_fade, self._default_query_channel, {}, {}
             )
 
     def create_preset_if_new(self, area: int, preset: int) -> None:
@@ -330,7 +335,7 @@ class DynaliteDevices:
         # If active is set to full, query all channels in the area
         if self._active == ACTIVE_ON:
             for channel in self._area[area].get(CONF_CHANNEL, {}):
-                self._dynalite.request_channel_level(area, channel)
+                self.request_channel_level(area, channel)
 
     def create_channel_if_new(self, area: int, channel: int) -> None:
         """Register a new channel."""
@@ -445,6 +450,19 @@ class DynaliteDevices:
     def select_preset(self, area: int, preset: int, fade: float) -> None:
         """Select a preset in an area."""
         self._dynalite.select_preset(area, preset, fade)
+
+    def request_area_preset(self, area: int, query_channel: Optional[int]) -> None:
+        """Send a request to an area to report the preset."""
+        if query_channel is None:
+            if area in self._area:
+                query_channel = self._area[area][CONF_QUERY_CHANNEL]
+            else:
+                query_channel = self._default_query_channel
+        self._dynalite.request_area_preset(area, query_channel)
+
+    def request_channel_level(self, area: int, channel: int) -> None:
+        """Send a request to an area to report the preset."""
+        self._dynalite.request_channel_level(area, channel)
 
     def get_area_name(self, area: int) -> str:
         """Return the name of an area."""

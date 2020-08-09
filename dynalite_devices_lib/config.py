@@ -27,6 +27,7 @@ from .const import (
     CONF_POLL_TIMER,
     CONF_PORT,
     CONF_PRESET,
+    CONF_QUERY_CHANNEL,
     CONF_ROOM,
     CONF_ROOM_OFF,
     CONF_ROOM_ON,
@@ -39,6 +40,7 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_PORT,
     DEFAULT_PRESETS,
+    DEFAULT_QUERY_CHANNEL,
     DEFAULT_TEMPLATES,
 )
 
@@ -70,6 +72,9 @@ class DynaliteConfig:
             self.active = temp_active
         self.poll_timer = config.get(CONF_POLL_TIMER, 1.0)
         self.default_fade = config.get(CONF_DEFAULT, {}).get(CONF_FADE, 0)
+        self.default_query_channel = config.get(CONF_DEFAULT, {}).get(
+            CONF_QUERY_CHANNEL, DEFAULT_QUERY_CHANNEL
+        )
         # create the templates
         config_templates = config.get(CONF_TEMPLATE, {})
         templates: Dict[str, Dict[str, Union[str, int]]] = {}
@@ -95,7 +100,12 @@ class DynaliteConfig:
             area = int(area_val)
             area_config = config[CONF_AREA].get(area_val)
             self.area[area] = self.configure_area(
-                area, area_config, self.default_fade, templates, self.default_presets
+                area,
+                area_config,
+                self.default_fade,
+                self.default_query_channel,
+                templates,
+                self.default_presets,
             )
 
     @staticmethod
@@ -140,6 +150,7 @@ class DynaliteConfig:
         area: int,
         area_config: Dict[str, Any],
         default_fade: float,
+        default_query_channel: int,
         templates: Dict[str, Dict[str, Union[str, int]]],
         default_presets: Dict[int, Any],
     ) -> Dict[str, Any]:
@@ -147,6 +158,9 @@ class DynaliteConfig:
         result = {
             CONF_NAME: area_config.get(CONF_NAME, f"Area {area}"),
             CONF_FADE: area_config.get(CONF_FADE, default_fade),
+            CONF_QUERY_CHANNEL: area_config.get(
+                CONF_QUERY_CHANNEL, default_query_channel
+            ),
         }
         for conf in [CONF_TEMPLATE, CONF_AREA_OVERRIDE]:
             if conf in area_config:

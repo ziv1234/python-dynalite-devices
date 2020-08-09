@@ -132,9 +132,9 @@ class Dynalite:
         packet = DynetPacket.request_channel_level_packet(area, channel)
         self.write(packet)
 
-    def request_area_preset(self, area: int) -> None:
+    def request_area_preset(self, area: int, query_channel: int) -> None:
         """Request current preset of an area."""
-        packet = DynetPacket.request_area_preset_packet(area)
+        packet = DynetPacket.request_area_preset_packet(area, query_channel)
         self.write(packet)
 
     def next_packet(self) -> Optional[DynetPacket]:

@@ -37,6 +37,7 @@ CONF_OPEN_PRESET = "open"
 CONF_POLL_TIMER = "polltimer"
 CONF_PORT = "port"
 CONF_PRESET = "preset"
+CONF_QUERY_CHANNEL = "query_channel"
 CONF_ROOM = "room"
 CONF_ROOM_OFF = "room_off"
 CONF_ROOM_ON = "room_on"
@@ -55,6 +56,7 @@ DEFAULT_CHANNEL_TYPE = "light"
 DEFAULT_COVER_CLASS = "shutter"
 DEFAULT_NAME = "dynalite"
 DEFAULT_PORT = 12345
+DEFAULT_QUERY_CHANNEL = 1
 DEFAULT_TEMPLATES: Dict[str, Dict[str, Union[str, int]]] = {
     CONF_ROOM: {CONF_ROOM_ON: "1", CONF_ROOM_OFF: "4"},
     CONF_TRIGGER: {CONF_TRIGGER: "1"},

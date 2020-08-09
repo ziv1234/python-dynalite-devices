@@ -1,5 +1,6 @@
 """Tests for DynaliteDevices."""
 
+
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
@@ -42,7 +43,7 @@ async def test_dynalite_devices_active(mock_gateway, active):
             [
                 DynetPacket.request_channel_level_packet(1, 1),
                 DynetPacket.request_channel_level_packet(1, 2),
-                DynetPacket.request_area_preset_packet(1),
+                DynetPacket.request_area_preset_packet(1, 1),
             ]
         )
     else:
@@ -293,3 +294,24 @@ async def test_dynalite_devices_default_fade(mock_gateway):
     )
     await mock_gateway.check_notifications([preset_notification(1, 1)])
     await mock_gateway.check_single_update(preset_device)
+
+
+@pytest.mark.asyncio
+async def test_dynalite_devices_request_area_preset(mock_gateway):
+    """Test the command to request and area preset."""
+    config = {
+        dyn_const.CONF_ACTIVE: False,
+        dyn_const.CONF_AREA: {"1": {}, "2": {dyn_const.CONF_QUERY_CHANNEL: 6}},
+        dyn_const.CONF_DEFAULT: {dyn_const.CONF_QUERY_CHANNEL: 3},
+    }
+    mock_gateway.configure_dyn_dev(config, 4)
+    assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
+    mock_gateway.dyn_dev.request_area_preset(1, None)
+    await mock_gateway.check_single_write(DynetPacket.request_area_preset_packet(1, 3))
+    mock_gateway.dyn_dev.request_area_preset(2, None)
+    await mock_gateway.check_single_write(DynetPacket.request_area_preset_packet(2, 6))
+    mock_gateway.dyn_dev.request_area_preset(3, None)
+    await mock_gateway.check_single_write(DynetPacket.request_area_preset_packet(3, 3))
+    mock_gateway.dyn_dev.request_area_preset(4, 9)
+    await mock_gateway.check_single_write(DynetPacket.request_area_preset_packet(4, 9))

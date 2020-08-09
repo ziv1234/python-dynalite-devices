@@ -139,10 +139,12 @@ class DynetPacket:
         )
 
     @staticmethod
-    def request_area_preset_packet(area: int) -> "DynetPacket":
+    def request_area_preset_packet(area: int, query_channel: int) -> "DynetPacket":
         """Create a packet to request the current preset in an area."""
         return DynetPacket(
-            area=area, command=OpcodeType.REQUEST_PRESET.value, data=[0, 0, 0]
+            area=area,
+            command=OpcodeType.REQUEST_PRESET.value,
+            data=[0, query_channel - 1, 0],
         )
 
     @staticmethod
