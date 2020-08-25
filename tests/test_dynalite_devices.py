@@ -28,7 +28,7 @@ async def test_empty_dynalite_devices(mock_gateway):
 @pytest.mark.parametrize("active", [False, dyn_const.ACTIVE_INIT, True])
 async def test_dynalite_devices_active(mock_gateway, active):
     """Test with active set to ON."""
-    [device_chan1, device_chan2, device_pres] = mock_gateway.configure_dyn_dev(
+    [_, _, device_pres] = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: active,
             dyn_const.CONF_AREA: {"1": {dyn_const.CONF_CHANNEL: {"1": {}, "2": {}}}},
@@ -241,31 +241,40 @@ async def test_dynalite_devices_preset_collision(mock_gateway):
 
 @pytest.mark.asyncio
 async def test_dynalite_devices_reconfig_with_missing(mock_gateway):
-    """Test reconfiguration with fewer devices and see that they are not available."""
-    [device] = mock_gateway.configure_dyn_dev(
+    """Test reconfiguration with template (room / cover) devices and see that they are not available."""
+    [device_room, device_cover] = mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
-            dyn_const.CONF_AREA: {"1": {dyn_const.CONF_CHANNEL: {"1": {}}}},
+            dyn_const.CONF_AREA: {
+                "1": {dyn_const.CONF_TEMPLATE: "room"},
+                "2": {dyn_const.CONF_TEMPLATE: "timecover"},
+            },
             dyn_const.CONF_PRESET: {},
         },
-        1,
+        2,
     )
     assert await mock_gateway.async_setup_dyn_dev()
     await mock_gateway.check_single_update(None)
-    assert device.available
-    assert device.name == "Area 1 Channel 1"
-    assert device.unique_id == "dynalite_area_1_channel_1"
-    assert device.area_name == "Area 1"
-    assert device.get_master_area == "Area 1"
+    assert device_room.available
+    assert device_room.name == "Area 1"
+    assert device_room.unique_id == "dynalite_area_1_room_switch"
+    assert device_room.area_name == "Area 1"
+    assert device_room.get_master_area == "Area 1"
+    assert device_room.available
+    assert device_cover.name == "Area 2"
+    assert device_cover.unique_id == "dynalite_area_2_time_cover"
+    assert device_cover.area_name == "Area 2"
+    assert device_cover.get_master_area == "Area 2"
     mock_gateway.configure_dyn_dev(
         {
             dyn_const.CONF_ACTIVE: False,
-            dyn_const.CONF_AREA: {},
+            dyn_const.CONF_AREA: {"1": {}, "2": {}},
             dyn_const.CONF_PRESET: {},
         },
         0,
     )
-    assert not device.available
+    assert not device_room.available
+    assert not device_cover.available
 
 
 @pytest.mark.asyncio

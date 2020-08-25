@@ -38,6 +38,7 @@ from .const import (
     CONF_TIME_COVER,
     CONF_TRGT_LEVEL,
     DEFAULT_CHANNEL_TYPE,
+    DEFAULT_COVER_CLASS,
     EVENT_CHANNEL,
     EVENT_CONNECTED,
     EVENT_DISCONNECTED,
@@ -116,6 +117,7 @@ class DynaliteDevices:
         self._area: Dict[int, Any] = {}
         self._dynalite = Dynalite(broadcast_func=self.handle_event)
         self._resetting = False
+        self._default_presets: Dict[int, Any] = {}
 
     async def async_setup(self) -> bool:
         """Set up a Dynalite bridge based on host parameter in the config."""
@@ -140,14 +142,17 @@ class DynaliteDevices:
         self._poll_timer = configurator.poll_timer
         self._default_fade = configurator.default_fade
         self._default_query_channel = configurator.default_query_channel
+        # keep the old values in case of a reconfigure, for auto discovery
+        old_area = self._area
         self._area = configurator.area
+        for area in old_area:
+            if area not in self._area:
+                self._area[area] = old_area[area]
         self._default_presets = configurator.default_presets
         # now register the channels and presets and ask for initial status if needed
         for area in self._area:
             if self._active in [ACTIVE_INIT, ACTIVE_ON]:
-                self.request_area_preset(
-                    area, self._area[area][CONF_QUERY_CHANNEL]
-                )  # XXX
+                self.request_area_preset(area, self._area[area][CONF_QUERY_CHANNEL])
             for channel in self._area[area][CONF_CHANNEL]:
                 self.create_channel_if_new(area, channel)
                 if self._active in [ACTIVE_INIT, ACTIVE_ON]:
@@ -477,7 +482,10 @@ class DynaliteDevices:
 
     def get_channel_fade(self, area: int, channel: int) -> float:
         """Return the fade of a channel."""
-        return self._area[area][CONF_CHANNEL][channel][CONF_FADE]
+        try:
+            return self._area[area][CONF_CHANNEL][channel][CONF_FADE]
+        except KeyError:
+            return self._default_fade
 
     def get_preset_name(self, area: int, preset: int) -> str:
         """Return the name of a preset."""
@@ -494,7 +502,10 @@ class DynaliteDevices:
 
     def get_preset_fade(self, area: int, preset: int) -> float:
         """Return the fade of a preset."""
-        return self._area[area][CONF_PRESET][preset][CONF_FADE]
+        try:
+            return self._area[area][CONF_PRESET][preset][CONF_FADE]
+        except KeyError:
+            return self._default_fade
 
     def get_multi_name(self, area: int) -> str:
         """Return the name of a multi-device."""
@@ -502,15 +513,24 @@ class DynaliteDevices:
 
     def get_device_class(self, area: int) -> str:
         """Return the class for a blind."""
-        return self._area[area][CONF_DEVICE_CLASS]
+        try:
+            return self._area[area][CONF_DEVICE_CLASS]
+        except KeyError:
+            return DEFAULT_COVER_CLASS
 
     def get_cover_duration(self, area: int) -> float:
         """Return the class for a blind."""
-        return self._area[area][CONF_DURATION]
+        try:
+            return self._area[area][CONF_DURATION]
+        except KeyError:
+            return 60
 
     def get_cover_tilt_duration(self, area: int) -> float:
         """Return the class for a blind."""
-        return self._area[area][CONF_TILT_TIME]
+        try:
+            return self._area[area][CONF_TILT_TIME]
+        except KeyError:
+            return 0
 
     def get_master_area(self, area: int) -> str:
         """Get the master area when combining entities from different Dynet areas to the same area."""
