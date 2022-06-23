@@ -78,6 +78,10 @@ async def test_preset_switch(mock_gateway):
     )
     assert device4.is_on
     assert not device1.is_on
+    device1.init_level(2)
+    assert device1.is_on
+    device1.init_level(0)
+    assert not device1.is_on
 
 
 @pytest.mark.asyncio
@@ -121,6 +125,12 @@ async def test_channel_switch(mock_gateway):
         DynetPacket.set_channel_level_packet(1, 1, 0.0, 0.5)
     )
     assert not device.is_on
+    device.init_level(2)
+    assert device.is_on
+    device.init_level(0)
+    assert not device.is_on
+    with pytest.raises(ValueError):
+        device.init_level(-1)
 
 
 @pytest.mark.asyncio
@@ -180,6 +190,14 @@ async def test_room_switch(mock_gateway):
     await mock_gateway.check_single_write(
         DynetPacket.select_area_preset_packet(1, 4, 0)
     )
+    assert not room_device.is_on
+    assert not on_device.is_on
+    assert off_device.is_on
+    room_device.init_level(2)
+    assert room_device.is_on
+    assert on_device.is_on
+    assert not off_device.is_on
+    room_device.init_level(0)
     assert not room_device.is_on
     assert not on_device.is_on
     assert off_device.is_on

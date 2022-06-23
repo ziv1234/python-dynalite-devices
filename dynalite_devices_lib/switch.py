@@ -52,10 +52,11 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
 
     def init_level(self, level):
         """Initialize to on/off."""
-        if level > -0.01 and level < 0.01:
+        if level > 0:
+            self._level = 1.0
+        elif level == 0:
             self._level = 0
-        elif level > 0.99 and level < 1.01:
-            self._level = 1
+        else:
             raise ValueError
 
 
@@ -115,11 +116,10 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
 
     def init_level(self, level):
         """Initialize to on/off."""
-        if level > -0.01 and level < 0.01:
+        if level:
+            self._level = 1.0
+        else:
             self._level = 0
-        elif level > 0.99 and level < 1.01:
-            self._level = 1
-            raise ValueError
 
 
 class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
@@ -169,10 +169,9 @@ class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
         """Initialize to on/off."""
         on_device = self.get_device(1)
         off_device = self.get_device(2)
-        if level > -0.01 and level < 0.01:
+        if level:
             on_device.init_level(1)
             off_device.init_level(0)
-        elif level > 0.99 and level < 1.01:
+        else:
             off_device.init_level(1)
             on_device.init_level(0)
-        raise ValueError

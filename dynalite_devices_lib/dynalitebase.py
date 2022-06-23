@@ -47,7 +47,6 @@ class DynaliteBaseDevice(ABC):
     @abstractmethod
     def init_level(self, level: float):
         """Initialize the level."""
-        pass
 
 
 class DynaliteChannelBaseDevice(DynaliteBaseDevice):
