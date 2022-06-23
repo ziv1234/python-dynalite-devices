@@ -1,6 +1,6 @@
 [run]
 source = dynalite_devices_lib/
-data_file = /home/ziv/dyn_dev/.coverage
+data_file = .coverage
 omit = dynalite_devices_lib/__version__.py
 
 [report]
@@ -17,4 +17,4 @@ exclude_lines =
     raise NotImplementedError
 
 [html]
-directory = /home/ziv/cov_html
+directory = cov_html
