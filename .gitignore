@@ -10,3 +10,4 @@ monkeytype.sqlite3
 .mypy_cache
 venv
 .coverage
+cov_html
