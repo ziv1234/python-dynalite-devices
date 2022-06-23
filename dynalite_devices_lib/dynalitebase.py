@@ -1,4 +1,5 @@
 """Support for the Dynalite devices."""
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable, Dict, List
 
 from .const import CONF_CHANNEL
@@ -7,7 +8,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .dynalite_devices import DynaliteDevices
 
 
-class DynaliteBaseDevice:
+class DynaliteBaseDevice(ABC):
     """Base class for Dynalite devices."""
 
     def __init__(self, area: int, bridge: "DynaliteDevices", hidden: bool) -> None:
@@ -42,6 +43,11 @@ class DynaliteBaseDevice:
         """Update all listeners."""
         for listener in self._listeners:
             listener(self, stop_fade)
+
+    @abstractmethod
+    def init_level(self, level: float):
+        """Initialize the level."""
+        pass
 
 
 class DynaliteChannelBaseDevice(DynaliteBaseDevice):
@@ -82,7 +88,6 @@ class DynaliteMultiDevice(DynaliteBaseDevice):
     ) -> None:
         """Initialize the device."""
         self._devices: Dict[int, DynaliteBaseDevice] = {}
-        self._num_devices = num_devices
         super().__init__(area, bridge, hidden)
 
     @property

@@ -188,6 +188,13 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
                 self.update_level(self._current_position, 0.0)
         super().listener(device, stop_fade)
 
+    def init_level(self, level):
+        """Initialize to a given position."""
+        if level < 0 or level > 100:
+            raise ValueError
+        target_level = level / 100
+        self.update_level(target_level, target_level)
+
 
 class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):
     """Representation of a Dynalite Channel as a Home Assistant Cover that uses up and down for tilt."""

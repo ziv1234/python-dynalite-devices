@@ -50,6 +50,14 @@ class DynaliteChannelSwitchDevice(DynaliteChannelBaseDevice):
         fade = self._bridge.get_channel_fade(self._area, self._channel)
         self._bridge.set_channel_level(self._area, self._channel, 0, fade)
 
+    def init_level(self, level):
+        """Initialize to on/off."""
+        if level > -0.01 and level < 0.01:
+            self._level = 0
+        elif level > 0.99 and level < 1.01:
+            self._level = 1
+            raise ValueError
+
 
 class DynalitePresetSwitchDevice(DynaliteBaseDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
@@ -105,6 +113,14 @@ class DynalitePresetSwitchDevice(DynaliteBaseDevice):
         # pylint: disable=unused-argument
         self.set_level(0)
 
+    def init_level(self, level):
+        """Initialize to on/off."""
+        if level > -0.01 and level < 0.01:
+            self._level = 0
+        elif level > 0.99 and level < 1.01:
+            self._level = 1
+            raise ValueError
+
 
 class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
     """Representation of a Dynalite Preset as a Home Assistant Switch."""
@@ -148,3 +164,15 @@ class DynaliteDualPresetSwitchDevice(DynaliteMultiDevice):
         device = self.get_device(2)
         assert isinstance(device, DynalitePresetSwitchDevice)
         await device.async_turn_on()
+
+    def init_level(self, level):
+        """Initialize to on/off."""
+        on_device = self.get_device(1)
+        off_device = self.get_device(2)
+        if level > -0.01 and level < 0.01:
+            on_device.init_level(1)
+            off_device.init_level(0)
+        elif level > 0.99 and level < 1.01:
+            off_device.init_level(1)
+            on_device.init_level(0)
+        raise ValueError

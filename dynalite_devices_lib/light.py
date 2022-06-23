@@ -73,3 +73,9 @@ class DynaliteChannelLightDevice(DynaliteChannelBaseDevice):
         """Turn light off."""
         # pylint: disable=unused-argument
         await self.async_turn_on(**{ATTR_BRIGHTNESS: 0})
+
+    def init_level(self, level):
+        """Initialize to a given level."""
+        if level < 0 or level > 255:
+            raise ValueError
+        self._level = level / 255

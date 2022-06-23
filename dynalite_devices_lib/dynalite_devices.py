@@ -214,9 +214,7 @@ class DynaliteDevices:
                     channel_device = self._added_channels[area][
                         area_config[CONF_CHANNEL_COVER]
                     ]
-                else:
-                    channel_device = DynaliteBaseDevice(area, self, True)
-                new_device.set_device(4, channel_device)
+                    new_device.set_device(4, channel_device)
                 self.register_new_device(new_device)
 
     def register_new_device(self, device: DynaliteBaseDevice) -> None:

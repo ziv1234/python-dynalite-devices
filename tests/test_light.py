@@ -142,3 +142,33 @@ async def test_light_to_preset(mock_gateway):
     )
     assert device.brightness == 0
     assert not device.is_on
+
+
+@pytest.mark.asyncio
+async def test_light_init(mock_gateway):
+    """Test a Dynalite light getting initial value."""
+    [device, _, _] = mock_gateway.configure_dyn_dev(
+        {
+            dyn_const.CONF_ACTIVE: False,
+            dyn_const.CONF_AREA: {
+                "1": {
+                    dyn_const.CONF_CHANNEL: {"1": {}},
+                }
+            },
+        },
+        3,
+    )
+    assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
+    assert device.available
+    # Now send commands
+    device.init_level(135)
+    assert device.brightness == 135
+    assert device.is_on
+    device.init_level(0)
+    assert device.brightness == 0
+    assert not device.is_on
+    with pytest.raises(ValueError):
+        device.init_level(-1)
+    with pytest.raises(ValueError):
+        device.init_level(256)
