@@ -192,8 +192,8 @@ class DynaliteTimeCoverDevice(DynaliteMultiDevice):
         """Initialize to a given position."""
         if level < 0 or level > 100:
             raise ValueError
-        target_level = level / 100
-        self.update_level(target_level, target_level)
+        self._current_position = level / 100.0
+        self._initialized = True
 
 
 class DynaliteTimeCoverWithTiltDevice(DynaliteTimeCoverDevice):

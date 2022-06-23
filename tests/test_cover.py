@@ -275,6 +275,14 @@ async def test_cover_no_tilt(mock_gateway):
     )
     assert not cover_device.is_opening
     assert not cover_device.is_closing
+    cover_device.init_level(50)
+    assert cover_device.current_cover_position == 50
+    cover_device.init_level(0)
+    assert cover_device.is_closed
+    with pytest.raises(ValueError):
+        cover_device.init_level(-1)
+    with pytest.raises(ValueError):
+        cover_device.init_level(101)
 
 
 @pytest.mark.asyncio
