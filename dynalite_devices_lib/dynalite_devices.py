@@ -412,9 +412,14 @@ class DynaliteDevices:
             assert action == CONF_ACTION_PRESET
             assert channel  # XXX - not handling for all channels
             area_config = self._area[area]
+            LOGGER.debug("handle_channel_change - area_config=%s", area_config)
             area_preset = area_config.get(CONF_PRESET, {})
+            LOGGER.debug("handle_channel_change - area_preset=%s", area_preset)
             preset_num = event.data[CONF_PRESET]
+            LOGGER.debug("handle_channel_change - preset_num=%s", preset_num)
             target_level = area_preset.get(preset_num, {}).get(CONF_LEVEL, -1)
+            LOGGER.debug("handle_channel_change - target_level=%s", target_level)
+            LOGGER.debug("handle_channel_change - area_preset.get(preset_num, {})=%s", area_preset.get(preset_num, {}))
             if target_level != -1:
                 channel_to_set = self._added_channels[area][channel]
                 channel_to_set.update_level(target_level, target_level)
