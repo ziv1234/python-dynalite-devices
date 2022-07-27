@@ -62,6 +62,7 @@ class Dynalite:
     async def connect(self, host: str, port: int) -> bool:
         """Connect to Dynet."""
         LOGGER.debug("Connecting to Dynet on %s:%s", host, port)
+        LOGGER.debug("Welcome to Adir's Version")
         self._loop = asyncio.get_running_loop()
         self._resetting = False
         result = await self.connect_internal(host, port)
