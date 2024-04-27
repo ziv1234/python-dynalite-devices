@@ -173,6 +173,7 @@ class DynaliteDevices:
     def register_rooms(self) -> None:
         """Register the room switches from two normal presets each."""
         for area, area_config in self._area.items():
+            LOGGER.debug("register_rooms with area=%s and areaconfig=%s", area, area_config)
             if area_config.get(CONF_TEMPLATE, "") == CONF_ROOM:
                 if area in self._added_room_switches:
                     continue
