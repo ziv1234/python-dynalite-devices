@@ -62,7 +62,6 @@ class Dynalite:
     async def connect(self, host: str, port: int) -> bool:
         """Connect to Dynet."""
         LOGGER.debug("Connecting to Dynet on %s:%s", host, port)
-        LOGGER.debug("Welcome to Adir's Version")
         self._loop = asyncio.get_running_loop()
         self._resetting = False
         result = await self.connect_internal(host, port)
@@ -102,7 +101,9 @@ class Dynalite:
     def broadcast(self, event: DynetEvent) -> None:
         """Broadcast an event to all listeners - queue."""
         assert self._loop
-        self._loop.call_soon(self._broadcast_func, event)
+        coro = self._broadcast_func(event)
+        callback = lambda: asyncio.ensure_future(coro)
+        self._loop.call_soon(callback)
 
     def set_channel_level(
         self, area: int, channel: int, level: float, fade: float

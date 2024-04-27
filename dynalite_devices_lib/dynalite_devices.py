@@ -245,7 +245,7 @@ class DynaliteDevices:
         """Update one or more devices."""
         self._notification_func(notification)
 
-    def handle_event(self, event: DynetEvent) -> None:
+    async def handle_event(self, event: DynetEvent) -> None:
         """Handle all events."""
         LOGGER.debug("handle_event - type=%s event=%s", event.event_type, event.data)
         if event.event_type == EVENT_CONNECTED:
@@ -259,7 +259,7 @@ class DynaliteDevices:
         elif event.event_type == EVENT_PRESET:
             LOGGER.debug("Received PRESET message")
             assert event.data
-            self.handle_preset_selection(event)
+            await self.handle_preset_selection(event)
             self.send_notification(
                 DynaliteNotification(
                     NOTIFICATION_PRESET,
@@ -320,7 +320,7 @@ class DynaliteDevices:
             "Creating Dynalite preset area=%s preset=%s hidden=%s", area, preset, hidden
         )
 
-    def handle_preset_selection(self, event: DynetEvent) -> None:
+    async def handle_preset_selection(self, event: DynetEvent) -> None:
         """Change the selected preset."""
         assert event.data
         LOGGER.debug("handle_preset_selection - event=%s", event.data)
@@ -337,6 +337,7 @@ class DynaliteDevices:
             self.update_device(device)
         # If active is set to full, query all channels in the area
         if self._active == ACTIVE_ON:
+            await asyncio.sleep(self._default_fade)
             for channel in self._area[area].get(CONF_CHANNEL, {}):
                 self.request_channel_level(area, channel)
 
@@ -412,14 +413,9 @@ class DynaliteDevices:
             assert action == CONF_ACTION_PRESET
             assert channel  # XXX - not handling for all channels
             area_config = self._area[area]
-            LOGGER.debug("handle_channel_change - area_config=%s", area_config)
             area_preset = area_config.get(CONF_PRESET, {})
-            LOGGER.debug("handle_channel_change - area_preset=%s", area_preset)
             preset_num = event.data[CONF_PRESET]
-            LOGGER.debug("handle_channel_change - preset_num=%s", preset_num)
             target_level = area_preset.get(preset_num, {}).get(CONF_LEVEL, -1)
-            LOGGER.debug("handle_channel_change - target_level=%s", target_level)
-            LOGGER.debug("handle_channel_change - area_preset.get(preset_num, {})=%s", area_preset.get(preset_num, {}))
             if target_level != -1:
                 channel_to_set = self._added_channels[area][channel]
                 channel_to_set.update_level(target_level, target_level)
