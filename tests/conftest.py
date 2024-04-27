@@ -1,8 +1,9 @@
 """Fixtures for the Dynalite tests."""
 import asyncio
+from unittest.mock import Mock, patch
 
-from asynctest import Mock, patch
 import pytest
+import pytest_asyncio
 
 import dynalite_devices_lib.const as dyn_const
 from dynalite_devices_lib.dynalite_devices import DynaliteDevices
@@ -167,7 +168,7 @@ class MockGateway:
         self.update_dev_func.assert_not_called()
 
 
-@pytest.fixture()
+@pytest_asyncio.fixture()
 async def mock_gateway(request):
     """Mock for a TCP gateway. Removes throttling by Dynet."""
     gateway = MockGateway(request, True)
@@ -175,7 +176,7 @@ async def mock_gateway(request):
     return gateway
 
 
-@pytest.fixture()
+@pytest_asyncio.fixture()
 async def mock_gateway_with_delay(request):
     """Mock for a TCP gateway. Keeps throttling by Dynet."""
     gateway = MockGateway(request, False)

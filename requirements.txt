@@ -1,7 +1,6 @@
 pytest
 pytest-cov
 pytest-asyncio
-asynctest
 pre-commit
 mypy
 setuptools

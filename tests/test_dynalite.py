@@ -1,8 +1,8 @@
 """Tests for DynaliteDevices."""
 
 import asyncio
+from unittest.mock import patch
 
-from asynctest import patch
 import pytest
 
 import dynalite_devices_lib.const as dyn_const
