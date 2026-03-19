@@ -106,8 +106,38 @@ class Dynalite:
     def set_channel_level(
         self, area: int, channel: int, level: float, fade: float
     ) -> None:
-        """Set the level of a channel."""
-        packet = DynetPacket.set_channel_level_packet(area, channel, level, fade)
+        """Set the level of a channel.
+
+        Uses official DyNet opcodes:
+        - OFF (level=0): FADE_CHANNEL_AREA_TO_PRESET (0x6B) with preset 4
+        - Any brightness (level>0): RAMP_CHANNEL_TO_LEVEL (0x71)
+
+        The previous implementation used opcodes 0x80-0x83
+        (SET_CHANNEL_X_TO_LEVEL_WITH_FADE) which are not standard DyNet
+        opcodes and do not work on PDEG gateways. Opcode 0x71 is the
+        official DyNet opcode for setting channel levels and works on
+        all channels, controllers, and gateways.
+        """
+        if level <= 0:
+            # OFF - use preset 4
+            packet = DynetPacket.fade_area_channel_preset_packet(
+                area, channel, 4, fade
+            )
+        else:
+            # Any brightness - use 0x71 (ramp channel to level)
+            target_level = int(255 - 254 * level)
+            if target_level < 1:
+                target_level = 1  # 0x01 = 100%
+            fade_time = int(fade * 10)  # fade in 100ms steps
+            if fade_time > 255:
+                fade_time = 255
+            if fade_time < 1:
+                fade_time = 1
+            packet = DynetPacket(
+                area=area,
+                command=0x71,  # RAMP_CHANNEL_TO_LEVEL
+                data=[channel - 1, target_level, fade_time],
+            )
         self.write(packet)
         broadcast_data = {
             CONF_AREA: area,

@@ -116,13 +116,13 @@ async def test_channel_switch(mock_gateway):
     await device.async_turn_on()
     await mock_gateway.check_single_update(device)
     await mock_gateway.check_single_write(
-        DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+        DynetPacket(area=1, command=0x71, data=[0, 1, 5])  # 0x71: ch0, level=1(100%), fade=5
     )
     assert device.is_on
     await device.async_turn_off()
     await mock_gateway.check_single_update(device)
     await mock_gateway.check_single_write(
-        DynetPacket.set_channel_level_packet(1, 1, 0.0, 0.5)
+        DynetPacket.fade_area_channel_preset_packet(1, 1, 4, 0.5)  # 0x6B: preset 4 (OFF)
     )
     assert not device.is_on
     device.init_level(2)

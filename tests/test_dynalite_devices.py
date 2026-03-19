@@ -294,7 +294,7 @@ async def test_dynalite_devices_default_fade(mock_gateway):
     await mock_gateway.check_writes([])
     await channel_device.async_turn_on()
     await mock_gateway.check_single_write(
-        DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+        DynetPacket(area=1, command=0x71, data=[0, 1, 5])  # 0x71: ch0, level=1(100%), fade=5
     )
     await mock_gateway.check_single_update(channel_device)
     await preset_device.async_turn_on()

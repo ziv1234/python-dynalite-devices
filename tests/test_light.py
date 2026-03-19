@@ -39,19 +39,19 @@ async def test_light(mock_gateway):
     assert device.get_master_area == name
     await device.async_turn_on()
     await mock_gateway.check_single_write(
-        DynetPacket.set_channel_level_packet(1, 1, 1.0, 0.5)
+        DynetPacket(area=1, command=0x71, data=[0, 1, 5])  # 0x71: ch0, level=1(100%), fade=5(0.5s)
     )
     await mock_gateway.check_single_update(device)
     assert device.brightness == 255
     await device.async_turn_on(brightness=51)
     await mock_gateway.check_single_write(
-        DynetPacket.set_channel_level_packet(1, 1, 0.2, 0.5)
+        DynetPacket(area=1, command=0x71, data=[0, 204, 5])  # 0x71: ch0, level=204(~20%), fade=5
     )
     await mock_gateway.check_single_update(device)
     assert device.brightness == 51
     await device.async_turn_off()
     await mock_gateway.check_single_write(
-        DynetPacket.set_channel_level_packet(1, 1, 0, 0.5)
+        DynetPacket.fade_area_channel_preset_packet(1, 1, 4, 0.5)  # 0x6B: preset 4 (OFF)
     )
     await mock_gateway.check_single_update(device)
     assert device.brightness == 0
