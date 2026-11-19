@@ -324,3 +324,23 @@ async def test_dynalite_write_message_throttle(mock_gateway_with_delay):
     await mock_gateway_with_delay.check_single_update(None)
     await asyncio.sleep(1)  # should be roughly 5 messages
     assert 3 * 8 <= len(mock_gateway_with_delay.in_buffer) <= 7 * 8
+
+
+@pytest.mark.asyncio
+async def test_dynalite_reset_while_connected(mock_gateway):
+    """Test that a reset closes a live connection without waiting for traffic."""
+    [device] = mock_gateway.configure_dyn_dev(
+        {
+            dyn_const.CONF_ACTIVE: False,
+            dyn_const.CONF_AREA: {"1": {dyn_const.CONF_CHANNEL: {"1": {}}}},
+            dyn_const.CONF_PRESET: {},
+        },
+    )
+    assert await mock_gateway.async_setup_dyn_dev()
+    await mock_gateway.check_single_update(None)
+    assert device.available
+    # The gateway stays connected and silent, as a quiet bus would
+    await asyncio.wait_for(mock_gateway.dyn_dev.async_reset(), timeout=1)
+    await asyncio.sleep(0.05)
+    # The gateway saw the connection close
+    assert mock_gateway.writer is None

@@ -255,6 +255,9 @@ class Dynalite:
     async def async_reset(self) -> None:
         """Close sockets and timers."""
         self._resetting = True
+        # Close the connection so a reader blocked on a quiet bus wakes up
+        if self._writer:
+            self._writer.close()
         # Wait for reader to also close
         if self._reader_future:
             await self._reader_future
